@@ -1,0 +1,97 @@
+/* Tastenlicht – iPad-Fassung. Grundlagen: Farben, Glas, Knoepfe, Blaetter (Sheets). Touch zuerst. */
+:root {
+  --bg: #07080c;
+  --glas: rgba(16, 18, 26, 0.78);
+  --glas-hell: rgba(32, 36, 48, 0.72);
+  --rand: rgba(255, 255, 255, 0.10);
+  --rand-stark: rgba(255, 255, 255, 0.22);
+  --text: #f3f4f8;
+  --text-2: rgba(243, 244, 248, 0.78);
+  --text-3: rgba(243, 244, 248, 0.52);
+  --akzent: #93dd3a;          /* rechte Hand / Erfolg */
+  --akzent-2: #ffd36b;        /* Gold: Sterne, Hinweise */
+  --blau: #4f9cff;            /* linke Hand */
+  --rot: #e3262e;             /* Trefferlinie */
+  --gefahr: #ff6b6b;
+  --radius: 16px;
+  --radius-k: 12px;
+  --tipp: 48px;               /* Mindestgroesse einer Tippflaeche */
+  --schrift: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --schrift-titel: -apple-system, "SF Pro Display", "Helvetica Neue", system-ui, sans-serif;
+  --oben: env(safe-area-inset-top, 0px);
+  --unten: env(safe-area-inset-bottom, 0px);
+  --links: env(safe-area-inset-left, 0px);
+  --rechts: env(safe-area-inset-right, 0px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 16px/1.4 var(--schrift); overflow: hidden;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; touch-action: manipulation; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.versteckt { display: none !important; }
+svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+svg .fuell { fill: currentColor; stroke: none; }
+
+/* ---------- Glasflaechen ---------- */
+.glas { background: var(--glas); border: 1px solid var(--rand); border-radius: var(--radius);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); }
+
+/* ---------- Knoepfe ---------- */
+.knopf { min-height: var(--tipp); min-width: var(--tipp); padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: var(--radius-k); border: 1px solid var(--rand); background: var(--glas-hell); color: var(--text); font-weight: 600; font-size: 16px;
+  cursor: pointer; transition: transform .08s, background .15s, border-color .15s; white-space: nowrap; }
+.knopf:active { transform: scale(0.96); background: rgba(60, 66, 84, 0.85); }
+.knopf.rund { padding: 0; width: var(--tipp); border-radius: 50%; }
+.knopf.an { border-color: var(--akzent); background: color-mix(in srgb, var(--akzent) 22%, rgba(32, 36, 48, 0.8)); }
+.knopf.akzent { background: var(--akzent); color: #0b1020; border-color: transparent; }
+.knopf.gold { background: var(--akzent-2); color: #1b1405; border-color: transparent; }
+.knopf.gross { min-height: 60px; min-width: 60px; font-size: 18px; }
+.knopf.rot { background: var(--rot); color: #fff; border-color: transparent; }
+.knopf:disabled { opacity: 0.4; }
+.knopf span { pointer-events: none; }
+
+/* Segmente (z. B. Hand: Links | Beide | Rechts) */
+.segmente { display: inline-flex; padding: 3px; gap: 3px; border-radius: 14px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--rand); }
+.segmente button { min-height: 42px; min-width: 52px; padding: 0 14px; border: 0; border-radius: 11px; background: transparent; color: var(--text-2); font-weight: 600; font-size: 15px; }
+.segmente button.an { background: var(--glas-hell); color: var(--text); box-shadow: inset 0 0 0 1px var(--rand-stark); }
+
+/* Pillen */
+.pille { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 18px; background: var(--glas); border: 1px solid var(--rand);
+  font-weight: 600; font-size: 15px; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); white-space: nowrap; }
+.pille.leise { color: var(--text-2); font-weight: 500; }
+
+/* ---------- Blaetter (von unten bzw. rechts) ---------- */
+.blatt-hinter { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 40; opacity: 0; transition: opacity .2s; }
+.blatt-hinter.offen { opacity: 1; }
+.blatt { position: fixed; z-index: 41; right: calc(12px + var(--rechts)); top: calc(12px + var(--oben)); bottom: calc(12px + var(--unten)); width: min(440px, calc(100vw - 24px));
+  display: flex; flex-direction: column; transform: translateX(110%); transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
+.blatt.offen { transform: none; }
+.blatt-kopf { display: flex; align-items: center; gap: 10px; padding: 14px 14px 10px 20px; border-bottom: 1px solid var(--rand); }
+.blatt-kopf h2 { flex: 1; margin: 0; font: 700 21px/1.2 var(--schrift-titel); }
+.blatt-inhalt { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px 20px 24px; }
+.reiter { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 0; }
+.reiter button { min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text-2); font-weight: 600; white-space: nowrap; }
+.reiter button.an { background: var(--glas-hell); border-color: var(--rand); color: var(--text); }
+
+/* Einstellungszeilen */
+.feld { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.feld > label { flex: 1; font-weight: 500; }
+.feld .hilfe { display: block; color: var(--text-3); font-size: 13px; font-weight: 400; margin-top: 2px; }
+.feld select { min-height: 44px; max-width: 220px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--rand); background: var(--glas-hell); }
+.feld input[type=range] { width: 170px; accent-color: var(--akzent); }
+.feld .wert { min-width: 54px; text-align: right; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.abschnittstitel { margin: 22px 0 6px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+.schalter { position: relative; width: 52px; height: 32px; flex: none; }
+.schalter input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+.schalter span { position: absolute; inset: 0; border-radius: 16px; background: rgba(255, 255, 255, 0.18); transition: background .2s; pointer-events: none; }
+.schalter span::after { content: ""; position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+.schalter input:checked + span { background: var(--akzent); }
+.schalter input:checked + span::after { transform: translateX(20px); }
+.text-hilfe { color: var(--text-3); font-size: 14px; }
+
+/* ---------- Meldung ---------- */
+#toast { position: fixed; left: 50%; bottom: calc(var(--steuerH, 120px) + 24px + var(--unten)); transform: translate(-50%, 16px); opacity: 0; z-index: 60; pointer-events: none;
+  padding: 12px 20px; border-radius: 14px; background: rgba(20, 22, 30, 0.94); border: 1px solid var(--rand); font-weight: 600; max-width: min(640px, 90vw); text-align: center;
+  transition: opacity .25s, transform .25s; }
+#toast.zeigen { opacity: 1; transform: translate(-50%, 0); }

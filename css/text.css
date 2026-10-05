@@ -1,0 +1,260 @@
+/* Text-Ansicht (iPad): Zeilen in Mundart ueber die Laute lernen. Alle Klassen mit tx-, Bausteine aus app.css.
+   Querformat breit (13"): Liste | Karte | Nachschlagen.  Querformat schmal (11"): Liste | Karte, Nachschlagen als Blatt.
+   Hochformat: Nummern-Leiste oben, Liste und Nachschlagen als Blaetter. Kein color-mix (iPadOS 16.0/16.1). */
+
+.tx-laden { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-3);
+  background: radial-gradient(ellipse at 50% 40%, #151826, #05060a); font-size: 18px; padding: 24px; text-align: center; }
+
+.tx-app { position: absolute; inset: 0; display: grid; gap: 12px; overflow: hidden; color: var(--text);
+  padding: calc(10px + var(--oben)) calc(12px + var(--rechts)) calc(12px + var(--unten)) calc(12px + var(--links));
+  grid-template-columns: 270px minmax(0, 1fr) 350px; grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "kopf kopf kopf" "liste mitte nach";
+  background:
+    radial-gradient(ellipse at 12% 6%, rgba(79, 156, 255, 0.10), transparent 45%),
+    radial-gradient(ellipse at 88% 94%, rgba(147, 221, 58, 0.07), transparent 45%),
+    radial-gradient(ellipse at 50% 50%, #10131c, #05060a); }
+.tx-frei { flex: 1; }
+.tx-blass { color: var(--text-3); }
+.tx-leer { color: var(--text-3); padding: 14px 4px; }
+.tx-app .knopf.an { background: rgba(147, 221, 58, 0.20); border-color: var(--akzent); }
+.tx-app .knopf.akzent svg .fuell, .tx-app .knopf.akzent { color: #0b1020; }
+.tx-app .segmente button { min-height: 44px; }
+
+/* ---------- Kopf ---------- */
+.tx-kopf { grid-area: kopf; display: flex; align-items: center; gap: 12px; min-height: 52px; min-width: 0; }
+.tx-marke { min-width: 0; }
+.tx-titel { font: 800 28px/1.1 var(--schrift-titel); letter-spacing: 0.2px;
+  background: linear-gradient(90deg, #ffd36b, #93dd3a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tx-unter { color: var(--text-3); font-size: 13px; white-space: nowrap; }
+.tx-stand { display: flex; gap: 8px; min-width: 0; overflow: hidden; }
+.tx-stand .pille { height: 36px; font-size: 14px; }
+.tx-stand .pille b { color: var(--text); font-weight: 700; margin-left: 2px; }
+.tx-k-zeilen, .tx-k-nach { display: none; }
+
+/* ---------- Zeilenliste ---------- */
+.tx-liste { grid-area: liste; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tx-blatt-kopf { display: none; align-items: center; gap: 10px; padding: 12px 12px 10px 18px; border-bottom: 1px solid var(--rand); }
+.tx-blatt-kopf h2 { flex: 1; margin: 0; font: 700 21px/1.2 var(--schrift-titel); }
+.tx-liste-inhalt { position: relative; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 4px 8px 16px; }
+.tx-abkopf { display: flex; align-items: center; gap: 8px; margin: 14px 8px 6px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+  font-weight: 700; color: var(--text-2); }
+.tx-abkopf i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.tx-zeile { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 2px 8px; align-items: center; width: 100%; min-height: 48px;
+  padding: 6px 10px; border-radius: 12px; border: 1px solid transparent; background: transparent; text-align: left; cursor: pointer;
+  -webkit-appearance: none; appearance: none; }
+.tx-zeile .tx-sterne-klein { grid-column: 2; }
+.tx-zeile.tx-summen .tx-sterne-klein { display: none; }
+.tx-zeile:active { background: var(--glas-hell); }
+.tx-zeile.tx-an { background: rgba(147, 221, 58, 0.14); border-color: rgba(147, 221, 58, 0.45); }
+.tx-nr { color: var(--text-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tx-tx { font-size: 15px; line-height: 1.3; }
+.tx-zeile.tx-summen .tx-tx { color: var(--text-3); font-style: italic; }
+.tx-sterne-klein { display: flex; gap: 1px; }
+.tx-st, .tx-st svg { width: 11px; height: 11px; }
+.tx-st svg { stroke: rgba(255, 255, 255, 0.3); stroke-width: 2; fill: none; }
+.tx-st.tx-voll svg { fill: var(--akzent-2); stroke: var(--akzent-2); }
+.tx-geheim .tx-zeile:not(.tx-summen) .tx-tx { filter: blur(6px); }
+
+/* Nummern-Leiste (nur Hochformat) */
+.tx-leiste { grid-area: leiste; display: none; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  position: relative; padding: 2px 2px 6px; scrollbar-width: none; }
+.tx-leiste::-webkit-scrollbar { display: none; }
+.tx-chip { position: relative; flex: none; min-width: 48px; height: 48px; padding: 0 8px; border-radius: 12px; border: 1px solid var(--rand);
+  border-bottom: 3px solid transparent; background: var(--glas); color: var(--text-2); font-weight: 700; font-variant-numeric: tabular-nums;
+  overflow: hidden; -webkit-appearance: none; appearance: none; }
+.tx-chip i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--akzent-2); }
+.tx-chip.tx-summen { color: var(--text-3); font-weight: 500; }
+.tx-chip.tx-an { background: rgba(147, 221, 58, 0.20); border-color: rgba(147, 221, 58, 0.6); color: var(--text); }
+
+/* ---------- Mitte ---------- */
+.tx-mitte { grid-area: mitte; min-height: 0; min-width: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px; }
+.tx-karte { position: relative; padding: 14px 20px 16px; flex: none; }
+.tx-karte-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 48px; }
+.tx-abschnitt { border-width: 1px; border-style: solid; }
+.tx-abschnitt i { width: 10px; height: 10px; border-radius: 3px; }
+.tx-zkinfo { display: inline-flex; flex-direction: column; line-height: 1.25; }
+.tx-zknr { color: var(--text-2); font-size: 15px; font-variant-numeric: tabular-nums; }
+.tx-sterne { display: inline-flex; }
+.tx-stern { width: 36px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent;
+  padding: 0; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.tx-stern svg { width: 24px; height: 24px; stroke: rgba(255, 255, 255, 0.35); stroke-width: 1.8; fill: none; }
+.tx-stern.tx-voll svg { fill: var(--akzent-2); stroke: var(--akzent-2); }
+.tx-stern:active svg { transform: scale(0.9); }
+
+.tx-original { font: 700 40px/1.25 var(--schrift-titel); margin: 12px 0 6px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.tx-wort { display: inline-flex; border-radius: 10px; padding: 1px 6px; cursor: pointer; transition: background 0.15s; }
+.tx-wort.tx-gewaehlt, .tx-wortlaut.tx-gewaehlt { background: rgba(255, 255, 255, 0.10); }
+.tx-silbe { transition: color 0.08s, text-shadow 0.08s; color: var(--text); white-space: pre; }
+.tx-original.tx-laeuft .tx-silbe { color: rgba(243, 244, 248, 0.5); }
+.tx-original.tx-laeuft .tx-silbe.tx-gesungen { color: #fff; }
+.tx-original.tx-laeuft .tx-silbe.tx-jetzt { color: var(--akzent); text-shadow: 0 0 22px rgba(147, 221, 58, 0.55); }
+.tx-original.tx-summen { font-style: italic; color: var(--text-2); }
+.tx-original.tx-summen .tx-silbe { color: var(--text-2); }
+
+.tx-laut { font-size: 28px; line-height: 1.35; font-weight: 600; color: var(--akzent-2); display: flex; flex-wrap: wrap; gap: 2px 12px;
+  letter-spacing: 0.3px; min-height: 1.35em; }
+.tx-laut .tx-blass { font-size: 18px; font-weight: 500; }
+.tx-wortlaut { border-radius: 8px; padding: 1px 6px; cursor: pointer; }
+.tx-betont { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.tx-ipa { color: var(--text-3); font-size: 16px; margin-top: 6px; }
+
+.tx-karte.tx-zu .tx-original, .tx-karte.tx-zu .tx-laut, .tx-karte.tx-zu .tx-ipa { filter: blur(14px); opacity: 0.45; pointer-events: none; }
+
+.tx-melodie { width: 100%; height: 110px; display: block; margin: 12px 0 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.25); }
+.tx-steuer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.tx-transport { display: inline-flex; align-items: center; gap: 6px; }
+.tx-play { min-width: 148px; }
+.tx-zeigen { margin-left: auto; }
+.tx-wdh { color: var(--text-3); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tx-mbox { position: relative; min-height: 1px; }
+.tx-echo { position: absolute; right: 16px; top: 50%; margin-top: -28px; padding: 10px 20px; z-index: 2; border-radius: 14px; font: 800 26px/1.2 var(--schrift-titel);
+  color: #1b1405; background: var(--akzent-2); box-shadow: 0 0 30px rgba(255, 211, 107, 0.5); animation: tx-puls 1.2s ease-in-out infinite; pointer-events: none; }
+@keyframes tx-puls { 50% { transform: scale(1.04); } }
+
+/* ---------- Uebe-Modi ---------- */
+.tx-modi { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
+.tx-modi button { min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--rand); background: var(--glas); color: var(--text-2);
+  font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.tx-modi button svg { width: 20px; height: 20px; }
+.tx-modi button.tx-an { color: var(--text); border-color: rgba(147, 221, 58, 0.6); background: rgba(147, 221, 58, 0.16); }
+.tx-modus { padding: 18px 20px 20px; flex: none; min-height: 220px; }
+.tx-modus h3 { margin: 0 0 6px; font: 700 20px/1.25 var(--schrift-titel); }
+.tx-erkl { color: var(--text-2); line-height: 1.5; margin-bottom: 12px; font-size: 16px; }
+.tx-erkl.tx-tipp { margin-top: 16px; margin-bottom: 0; color: var(--text-3); font-size: 15px; }
+.tx-reihe { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+.tx-gross { font: 700 34px/1.4 var(--schrift-titel); display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0 4px; min-height: 52px; align-items: center; }
+.tx-luecke, .tx-anfang { font: inherit; min-height: 48px; padding: 0 10px; border-radius: 10px; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.tx-luecke { min-width: 2.4em; background: rgba(255, 255, 255, 0.07); border: 1px dashed rgba(255, 255, 255, 0.28); color: transparent; }
+.tx-luecke.tx-auf { color: var(--akzent-2); background: transparent; border-color: transparent; }
+.tx-anfang { background: transparent; border: 1px solid transparent; letter-spacing: 1px; }
+.tx-anfang:active { background: rgba(255, 255, 255, 0.07); }
+.tx-anfang.tx-auf { color: var(--akzent-2); letter-spacing: 0; }
+.tx-lied-jetzt { justify-content: center; text-align: center; min-height: 100px; }
+.tx-lied-dann { color: var(--text-3); text-align: center; font-size: 17px; min-height: 1.4em; }
+
+.tx-kartei { padding: 24px; border-radius: 16px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--rand); text-align: center; }
+.tx-kartei-vorne { color: var(--text-2); margin-bottom: 10px; font-size: 16px; }
+.tx-kartei-hinten { font: 700 30px/1.35 var(--schrift-titel); margin: 8px 0; }
+.tx-kartei-laut { display: block; font-size: 22px; font-weight: 600; color: var(--akzent-2); margin-top: 8px; }
+.tx-bewerten { flex-direction: column; gap: 0; min-width: 116px; min-height: 56px; line-height: 1.15; }
+.tx-bewerten small { font-size: 12px; font-weight: 500; opacity: 0.75; }
+
+/* ---------- Nachschlagen ---------- */
+.tx-nach { grid-area: nach; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tx-nach-kopf { display: flex; align-items: flex-start; gap: 6px; border-bottom: 1px solid var(--rand); padding-bottom: 10px; }
+.tx-reiter { flex: 1; flex-wrap: wrap; overflow: visible; padding: 10px 12px 0; }
+.tx-reiter button { min-height: 44px; font-size: 15px; }
+.tx-nach-zu { display: none; margin: 8px 10px 0 0; }
+.tx-nach-inhalt { position: relative; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 12px 18px 24px; line-height: 1.55; font-size: 16px; }
+.tx-nach-inhalt h3 { margin: 6px 0 8px; font: 700 20px/1.3 var(--schrift-titel); }
+.tx-nach-inhalt .abschnittstitel { margin: 18px 0 6px; }
+.tx-text { color: var(--text-2); }
+.tx-text b { color: var(--text); }
+.tx-klein { min-height: 44px; padding: 0 12px; font-size: 15px; margin-bottom: 8px; }
+.tx-kapitel { display: block; width: 100%; text-align: left; padding: 10px 12px; min-height: 48px; border-radius: 12px; border: 1px solid transparent;
+  background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.tx-kapitel:active { background: var(--glas-hell); }
+.tx-kapitel b { display: block; font-weight: 650; }
+.tx-kapitel span { color: var(--text-3); font-size: 14px; }
+.tx-unsicher { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: rgba(255, 211, 107, 0.15);
+  color: var(--akzent-2); margin-left: 6px; vertical-align: middle; line-height: 1.5; }
+.tx-bsp { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 15px; padding: 7px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.tx-bsp-laut { color: var(--akzent-2); font-weight: 600; }
+.tx-kachel { padding: 12px 14px; border-radius: 12px; background: var(--glas-hell); border: 1px solid var(--rand); margin-top: 12px; color: var(--text-2); }
+.tx-kachel b { display: block; color: var(--text); }
+.tx-kacheln { display: flex; gap: 10px; }
+.tx-kacheln .tx-kachel { flex: 1; margin-top: 4px; font-size: 14px; }
+.tx-kacheln .tx-kachel b { font: 700 24px/1.2 var(--schrift-titel); margin-top: 2px; }
+.tx-suche { width: 100%; min-height: 48px; margin: 4px 0 8px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--rand);
+  background: rgba(0, 0, 0, 0.3); color: var(--text); font-size: 17px; -webkit-user-select: text; user-select: text; -webkit-appearance: none; appearance: none; }
+.tx-suche::placeholder { color: var(--text-3); }
+.tx-wort-eintrag { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: baseline; width: 100%; min-height: 48px;
+  padding: 10px 2px; border: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); background: transparent; text-align: left; cursor: pointer;
+  -webkit-appearance: none; appearance: none; }
+.tx-wort-eintrag:active b { color: var(--akzent-2); }
+.tx-wort-eintrag span { color: var(--text-2); }
+.tx-wort-eintrag small { color: var(--text-3); }
+.tx-legende { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.tx-legende b { display: block; color: var(--akzent-2); font-size: 19px; font-weight: 800; }
+.tx-legende div { color: var(--text-2); font-size: 15px; }
+.tx-legende small { display: block; color: var(--text-3); font-size: 14px; margin-top: 2px; }
+.tx-nach-inhalt .feld > label { cursor: pointer; }
+.tx-worum p { color: var(--text-2); margin: 0 0 12px; }
+.tx-worum p.leise { color: var(--text-3); }
+.tx-worum h3 { margin-top: 20px; }
+.tx-worum ol { margin: 0; padding-left: 22px; color: var(--text-2); }
+.tx-worum li { margin: 4px 0; }
+.tx-teil { display: grid; grid-template-columns: minmax(0, 1fr) 90px 44px; gap: 10px; align-items: center; min-height: 36px; }
+.tx-teil-name { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-teil-name i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.tx-balken { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.tx-balken i { display: block; height: 100%; background: var(--akzent-2); border-radius: 4px; }
+.tx-teil small { color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; }
+.tx-tag { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.tx-tag small { color: var(--text-3); }
+
+/* ---------- Popover (Wortbedeutung) ---------- */
+.tx-pop { position: absolute; z-index: 30; width: max-content; max-width: min(380px, calc(100% - 24px)); padding: 12px 14px; font-size: 16px; line-height: 1.45;
+  background: rgba(24, 27, 37, 0.97); border-color: var(--rand-stark); }
+.tx-pop-kopf { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+.tx-pop-kopf b { font-size: 19px; }
+.tx-pop-art { color: var(--text-3); font-size: 13px; }
+.tx-pop-hd { font-size: 18px; margin-top: 4px; color: var(--text); }
+.tx-pop-hinweis { color: var(--text-3); font-size: 14px; margin-top: 4px; }
+.tx-pop-knopf { margin-top: 10px; min-height: 44px; font-size: 15px; }
+
+/* ---------- Hintergrund fuer Blaetter ---------- */
+.tx-hinter { position: absolute; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.45); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.tx-hinter.tx-offen { opacity: 1; pointer-events: auto; }
+
+/* ---------- Querformat schmal (iPad Pro 11") und Hochformat: Nachschlagen als Blatt von rechts ---------- */
+@media (orientation: portrait), (orientation: landscape) and (max-width: 1299px) {
+  .tx-nach { position: absolute; z-index: 21; right: calc(12px + var(--rechts)); top: calc(12px + var(--oben)); bottom: calc(12px + var(--unten));
+    width: min(440px, calc(100% - 24px)); transform: translateX(calc(100% + 40px)); visibility: hidden; background: rgba(18, 20, 29, 0.97);
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.25s; }
+  .tx-nach.tx-offen { transform: none; visibility: visible; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .tx-nach-zu { display: inline-flex; }
+  .tx-k-nach { display: inline-flex; }
+}
+
+@media (orientation: landscape) and (max-width: 1299px) {
+  .tx-app { grid-template-columns: 250px minmax(0, 1fr); grid-template-areas: "kopf kopf" "liste mitte"; }
+  .tx-original { font-size: 38px; }
+}
+
+/* ---------- Hochformat: Leiste oben, Zeilenliste als Blatt von links ---------- */
+@media (orientation: portrait) {
+  .tx-app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "kopf" "leiste" "mitte"; }
+  .tx-leiste { display: flex; }
+  .tx-k-zeilen { display: inline-flex; }
+  .tx-liste { position: absolute; z-index: 21; left: calc(12px + var(--links)); top: calc(12px + var(--oben)); bottom: calc(12px + var(--unten));
+    width: min(420px, calc(100% - 64px)); transform: translateX(calc(-100% - 40px)); visibility: hidden; background: rgba(18, 20, 29, 0.97);
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.25s; }
+  .tx-liste.tx-offen { transform: none; visibility: visible; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .tx-blatt-kopf { display: flex; }
+  .tx-original { font-size: 40px; }
+}
+
+/* hohe Hochformate (iPad Pro 13" hochkant): den Platz fuer groessere Schrift und Melodie nutzen */
+@media (orientation: portrait) and (min-height: 1300px) {
+  .tx-original { font-size: 44px; }
+  .tx-laut { font-size: 30px; }
+  .tx-melodie { height: 150px; }
+  .tx-gross { font-size: 38px; }
+}
+
+/* schmale Hochformate (iPad Pro 11" hochkant): Kopf straffen */
+@media (orientation: portrait) and (max-width: 900px) {
+  .tx-unter { display: none; }
+  .tx-k-nach span { display: none; }
+  .tx-k-nach { padding: 0; width: var(--tipp); border-radius: 50%; }
+  .tx-original { font-size: 38px; }
+}
+
+/* niedrige Fenster (Querformat 11"): Melodie-Leiste etwas flacher */
+@media (max-height: 900px) {
+  .tx-melodie { height: 92px; margin: 10px 0; }
+  .tx-original { margin-top: 8px; }
+}

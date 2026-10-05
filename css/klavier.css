@@ -1,0 +1,173 @@
+/* Klavier-Ansicht der iPad-Fassung: Buehne bildschirmfuellend, Kopf und Leiste als Glas darueber. */
+#buehne { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+/* ---------- Kopf ---------- */
+#kopf { position: fixed; z-index: 10; left: calc(12px + var(--links)); right: calc(12px + var(--rechts)); top: calc(10px + var(--oben));
+  display: flex; align-items: flex-start; gap: 12px; pointer-events: none; }
+#kopf > * { pointer-events: auto; }
+.titelkarte { padding: 10px 16px; min-width: 0; max-width: 34vw; }
+.titelkarte .titel { font: 700 22px/1.15 var(--schrift-titel); letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.titelkarte .unter { color: var(--text-2); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+#kopf .mitte { flex: 1; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding-top: 4px; pointer-events: none; }
+#kopf .mitte .pille { pointer-events: auto; }
+.schlaege { display: inline-flex; gap: 6px; align-items: center; padding: 0 12px; }
+.schlaege i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); transition: background .08s, transform .08s; }
+.schlaege i.an { background: #fff; transform: scale(1.25); }
+.schlaege i.eins.an { background: var(--akzent-2); }
+#kopf .rechts { display: flex; gap: 8px; }
+#kopf .rechts .knopf { background: var(--glas); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+
+/* ---------- Akkord-Anzeige ---------- */
+#akkordHud { position: fixed; z-index: 9; right: calc(12px + var(--rechts)); top: calc(78px + var(--oben)); min-width: 150px; padding: 10px 16px 12px; text-align: center; }
+#akkordHud .akk { font: 800 38px/1.05 var(--schrift-titel); letter-spacing: -.01em; }
+#akkordHud .stufe { color: var(--text-3); font-weight: 700; font-size: 14px; margin-top: 2px; }
+#akkordHud .naechster { color: var(--text-2); font-size: 14px; margin-top: 4px; }
+#akkordHud .naechster b { color: var(--text); }
+
+/* ---------- Liedtext ---------- */
+#liedtext { position: fixed; z-index: 8; left: 50%; transform: translateX(-50%); top: calc(74px + var(--oben)); width: min(900px, 66vw); text-align: center; pointer-events: none;
+  padding: 10px 44px 14px; border-radius: 44px;
+  background: radial-gradient(ellipse at center, rgba(5, 6, 10, 0.72) 0%, rgba(5, 6, 10, 0.46) 55%, rgba(5, 6, 10, 0) 76%); }
+#liedtext .zeile .s.jetzt { text-shadow: 0 0 18px color-mix(in srgb, var(--akzent-2) 70%, transparent), 0 2px 10px rgba(0, 0, 0, 0.9); }
+#liedtext.mitte { top: 34%; }
+#liedtext .zeile { font: 700 30px/1.25 var(--schrift-titel); text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9); }
+#liedtext .zeile .s { color: rgba(255, 255, 255, 0.55); transition: color .08s; }
+#liedtext .zeile .s.gesungen { color: #fff; }
+#liedtext .zeile .s.jetzt { color: var(--akzent-2); }
+#liedtext .zeile.summen { font-style: italic; color: var(--text-3); }
+#liedtext .laut { margin-top: 2px; color: #cfe8a8; font: 600 21px/1.25 var(--schrift); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9); }
+#liedtext .laut u { text-decoration-thickness: 2px; text-underline-offset: 4px; }
+#liedtext .naechste { margin-top: 6px; color: var(--text-3); font: 600 19px/1.25 var(--schrift-titel); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9); }
+#liedtext.gross .zeile { font-size: 38px; } #liedtext.gross .laut { font-size: 25px; } #liedtext.gross .naechste { font-size: 22px; }
+
+/* ---------- Einzaehler, Banner ---------- */
+#einzaehler { position: fixed; z-index: 12; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.8); font: 800 120px/1 var(--schrift-titel); color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 6px 40px rgba(0, 0, 0, 0.8); opacity: 0; transition: opacity .12s, transform .12s; pointer-events: none; }
+#einzaehler.an { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+/* ---------- Leiste unten ---------- */
+#steuerung { position: fixed; z-index: 11; left: calc(10px + var(--links)); right: calc(10px + var(--rechts)); bottom: calc(10px + var(--unten)); padding: 8px 10px 10px; }
+#zeitleiste { display: block; width: 100%; height: 30px; border-radius: 9px; touch-action: none; }
+#steuerung .reihe { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; margin-top: 8px; }
+#steuerung .gruppe { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+#steuerung.klein .nur-gross { display: none !important; }
+#steuerung .zeit { min-width: 92px; color: var(--text-2); font-variant-numeric: tabular-nums; font-size: 15px; text-align: center; }
+#steuerung select { min-height: var(--tipp); padding: 0 12px; border-radius: var(--radius-k); border: 1px solid var(--rand); background: var(--glas-hell); font-weight: 600; max-width: 230px; }
+#steuerung select.fassung { border-color: color-mix(in srgb, var(--akzent-2) 55%, transparent); }
+.tempo { display: flex; align-items: center; gap: 6px; }
+.tempo input { width: 130px; accent-color: var(--rot); }
+.tempo .wert { min-width: 52px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.knopf.uebeweg.an { background: linear-gradient(135deg, color-mix(in srgb, var(--akzent-2) 45%, transparent), color-mix(in srgb, var(--akzent) 35%, transparent)); border-color: var(--akzent-2); }
+#btnPlay svg { width: 28px; height: 28px; }
+
+/* ---------- Coach (Uebeweg) ---------- */
+#coach { position: fixed; z-index: 13; left: calc(12px + var(--links)); top: calc(82px + var(--oben)); width: min(430px, 44vw); padding: 14px 16px 12px; }
+.coachkopf { display: flex; align-items: center; gap: 8px; }
+.coachkopf .etappe { flex: 1; font: 700 19px/1.2 var(--schrift-titel); }
+.coachkopf .knopf { min-height: 40px; min-width: 40px; }
+.stationen { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
+.stationen .st { padding: 8px 12px; border-radius: 12px; font-size: 14px; font-weight: 700; background: rgba(255, 255, 255, 0.06); color: var(--text-3); border: 1px solid transparent; }
+.stationen .st.fertig { color: var(--akzent); border-color: color-mix(in srgb, var(--akzent) 35%, transparent); }
+.stationen .st.jetzt { background: var(--akzent); color: #0b1020; }
+.coach-nachricht { font-size: 16px; line-height: 1.45; min-height: 46px; }
+.durchgaenge { display: flex; align-items: center; gap: 6px; margin: 8px 0 10px; color: var(--text-3); font-size: 13.5px; }
+.durchgaenge i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.3); }
+.durchgaenge i.voll { background: var(--akzent); border-color: var(--akzent); }
+.coach-urteil { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 8px; }
+.coach-urteil .knopf { min-height: 64px; font-size: 19px; }
+.coach-urteil .knopf.ja { background: var(--akzent); color: #0b1020; border-color: transparent; }
+.coach-urteil.fragt .knopf.ja { animation: puls 1.1s ease-in-out infinite; }
+@keyframes puls { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--akzent) 35%, transparent); } }
+.coach-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; }
+.coach-knoepfe .knopf { min-height: 44px; font-size: 15px; }
+.coach-fuss { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; margin-top: 10px; color: var(--text-3); font-size: 13px; }
+.coach-fuss > span { white-space: nowrap; }
+.coach-fuss .faellig { color: var(--akzent-2); font-weight: 700; }
+.tagesziel { display: inline-block; width: 46px; height: 6px; margin-right: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); vertical-align: 1px; overflow: hidden; }
+.tagesziel > i { display: block; height: 100%; border-radius: 3px; background: var(--akzent-2); }
+.tagesziel.voll > i { background: #ffd36b; }
+
+/* ---------- Lernpfad ---------- */
+.pfadleiste { height: 6px; margin: 4px 0 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.pfadleiste i { display: block; height: 100%; background: linear-gradient(90deg, var(--blau), var(--akzent)); }
+.pfadteil { margin: 16px 2px 6px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--text-2); }
+.pfadteil i { width: 10px; height: 10px; border-radius: 3px; }
+.etp { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 6px 10px; border-radius: 12px; }
+.etp:active, .etp.jetzt { background: rgba(255, 255, 255, 0.07); }
+.etp .kreis { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; border: 2px solid rgba(255, 255, 255, 0.25); color: var(--text-2); flex: none; }
+.etp.fertig .kreis { background: var(--akzent); border-color: var(--akzent); color: #0b1020; }
+.etp.jetzt .kreis { border-color: var(--akzent-2); color: var(--akzent-2); }
+.etp .tx { flex: 1; min-width: 0; }
+.etp .tx b { display: block; font-size: 15px; }
+.etp .tx span { display: block; font-size: 13px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.etp .sterne { display: flex; gap: 2px; color: rgba(255, 255, 255, 0.25); }
+.etp .sterne svg { width: 16px; height: 16px; }
+.etp .sterne .voll { color: var(--akzent-2); }
+.etp .sterne .voll svg path { fill: currentColor; }
+.faellig-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #0b1020; background: var(--akzent-2); vertical-align: 2px; }
+
+/* ---------- Akkordblatt ---------- */
+#akkordblatt { position: fixed; inset: 0; z-index: 30; background: #f7f5ef; color: #17171b; display: flex; flex-direction: column; -webkit-user-select: text; user-select: text; }
+#akkordblatt .blatt-leiste { display: flex; align-items: center; gap: 10px; padding: calc(10px + var(--oben)) calc(16px + var(--rechts)) 10px calc(16px + var(--links)); background: #17171b; color: #fff; }
+#akkordblatt .blatt-leiste b { flex: 1; font: 700 19px var(--schrift-titel); }
+#akkordblatt .blatt-inhalt { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 24px calc(32px + var(--rechts)) 60px calc(32px + var(--links)); }
+.blatt-titel h1 { margin: 0; font: 800 34px/1.1 var(--schrift-titel); }
+.blatt-titel div { color: #555; margin-top: 4px; }
+.blatt-teil { margin-top: 26px; break-inside: avoid; }
+.blatt-teil h2 { margin: 0 0 6px; font: 800 15px var(--schrift-titel); letter-spacing: .08em; text-transform: uppercase; color: #8a1c22; }
+.blatt-takte { font: 600 15px/1.6 ui-monospace, Menlo, monospace; color: #333; white-space: pre; overflow-x: auto; }
+.blatt-zeile { display: flex; flex-wrap: wrap; align-items: flex-end; margin: 10px 0 2px; font-size: 21px; }
+.blatt-zeile.summen { color: #888; font-style: italic; }
+.blatt-zeile .sb { display: inline-flex; flex-direction: column; }
+.blatt-zeile .sb.wortanfang { margin-left: .3em; }
+.blatt-zeile .ak { min-height: 1.15em; font: 800 15px/1.15 var(--schrift-titel); color: #8a1c22; white-space: pre; }
+@media print {
+  body, html { overflow: visible !important; height: auto !important; background: #fff !important; }
+  body > *:not(#app) { display: none !important; }
+  #app > *:not(#akkordblatt) { display: none !important; }
+  #akkordblatt { position: static; }
+  #akkordblatt .blatt-leiste { display: none; }
+  #akkordblatt .blatt-inhalt { overflow: visible; padding: 0; }
+}
+
+/* ---------- Start- und Ladebildschirm ---------- */
+.vollbild-karte { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 35%, #1a1d29 0%, #07080c 70%); transition: opacity .35s; }
+.vollbild-karte.weg { opacity: 0; pointer-events: none; }
+.vollbild-karte .inhalt { text-align: center; max-width: 560px; padding: 24px; }
+.vollbild-karte h1 { margin: 0 0 6px; font: 800 40px/1.1 var(--schrift-titel); }
+.vollbild-karte p { color: var(--text-2); margin: 6px 0; }
+.ladebalken { width: 320px; max-width: 70vw; height: 8px; margin: 22px auto 10px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.ladebalken i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--blau), var(--akzent)); transition: width .2s; }
+.startknopf { margin-top: 26px; min-height: 72px; padding: 0 40px; font-size: 21px; border-radius: 36px; }
+.startknopf svg { width: 28px; height: 28px; }
+
+/* ---------- Text-Ansicht (Behaelter) ---------- */
+#textWurzel { position: fixed; inset: 0; z-index: 25; background: var(--bg); }
+
+/* ---------- niedrige Bildschirme (iPad 11" quer): Coach kompakter ---------- */
+@media (orientation: landscape) and (max-height: 900px) {
+  #coach { top: calc(74px + var(--oben)); padding: 10px 12px 10px; width: min(400px, 40vw); }
+  .coachkopf .etappe { font-size: 17px; }
+  .stationen { margin: 8px 0 6px; gap: 5px; }
+  .stationen .st { padding: 6px 10px; font-size: 13px; }
+  .coach-nachricht { font-size: 15px; min-height: 0; }
+  .durchgaenge { margin: 6px 0 8px; }
+  .coach-urteil .knopf { min-height: 54px; font-size: 17px; }
+  .coach-knoepfe .knopf { min-height: 40px; font-size: 14px; padding: 0 12px; }
+  .coach-fuss { margin-top: 8px; }
+  #akkordHud .akk { font-size: 32px; }
+}
+
+/* ---------- Hochformat ---------- */
+@media (orientation: portrait) {
+  .titelkarte { max-width: 44vw; }
+  #uiTempo { display: none; }                      /* Tempo steht unten in der Leiste */
+  #steuerung .gruppe { flex-wrap: wrap; }
+  #steuerung select { max-width: 190px; }
+  #steuerung .segmente button { min-width: 44px; padding: 0 10px; }
+  .tempo input { width: 110px; }
+  #liedtext { width: 92vw; top: calc(150px + var(--oben)); }
+  #coach { width: min(460px, calc(100vw - 24px)); top: calc(76px + var(--oben)); }
+  #akkordHud { top: calc(76px + var(--oben)); min-width: 120px; }
+  #akkordHud .akk { font-size: 30px; }
+}
