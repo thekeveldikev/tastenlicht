@@ -26,6 +26,39 @@ export async function ladeSong(basis = 'daten/') {
   return song;
 }
 
+// ------------------------------------------------------------------ Baukasten: je Liedteil ein anderer Stil
+// wahl = { t0: 'intim2', t1: 'intim2', t2: 'orig2', … } – Schluessel = Nummer des Liedteils (t0 = Vorspiel)
+// -> Fassung "mix" in song.fassungen
+export function baukastenSetzen(song, wahl = {}) {
+  const basis = song.fassungen.find((x) => x.id === 'begl1');
+  if (!basis) return null;
+  const teile = basis.abschnitte || [];
+  const rh = [], lh = [], ped = [];
+  teile.forEach((ab, i) => {
+    const a = (ab.von - 1) * 4;                                    // Vorspiel: von -1 -> Schlag -8
+    const e = i + 1 < teile.length ? (teile[i + 1].von - 1) * 4 : Infinity;
+    const id = wahl[`t${i}`] ?? wahl[ab.name];
+    const f = song.fassungen.find((x) => x.id === id && x.art === 'begleitung' && x.id !== 'mix') || song.fassungen.find((x) => x.id === 'begl3') || basis;
+    for (const sp of f.spuren) {
+      for (const n of sp.noten) {
+        if (n.b < a - 1e-6 || n.b >= e - 1e-6) continue;
+        (sp.hand === 'L' ? lh : rh).push({ ...n, d: Math.min(n.d, e - n.b + 0.02) });
+      }
+    }
+    for (const p of f.pedal || basis.pedal || []) {
+      if (p.b >= a - 0.1 && p.b < e - 1e-6) ped.push({ ...p, d: Math.min(p.d, e - p.b - 0.04) });
+    }
+  });
+  const sortiere = (l) => l.sort((x, y) => x.b - y.b || x.p - y.p);
+  const mix = {
+    id: 'mix', name: 'Mein Arrangement', art: 'begleitung', stil: 'mix', stilName: 'Mein Arrangement', stufe: 0, stufeName: '',
+    beschreibung: 'je Liedteil dein Lieblingsstil', anfang_b: basis.anfang_b, erbe: 'begl1', pedal: ped,
+    spuren: [{ id: 'rh', name: 'Rechte Hand', hand: 'R', noten: sortiere(rh) }, { id: 'lh', name: 'Linke Hand', hand: 'L', noten: sortiere(lh) }],
+  };
+  song.fassungen = [...song.fassungen.filter((x) => x.id !== 'mix'), mix];
+  return mix;
+}
+
 // ------------------------------------------------------------------ Fassungen (Song mit Melodie / Begleitung in Stufen)
 // transposition: Halbtoene (z. B. -3 = in deine Stimmlage). Die Grunddaten bleiben unveraendert, gespielt wird eine Kopie.
 export function setzeFassung(song, id, transposition = song.transposition || 0) {
@@ -40,10 +73,12 @@ export function setzeFassung(song, id, transposition = song.transposition || 0) 
   setzeTonika(ton.pc, ton.kreuz);        // Stufen, Stufen-Notennamen und Akkorderkennung folgen der Tonart
   song.fassung = f;
   const kopie = (s) => ({ ...s, noten: s.noten.map((n) => ({ ...n, p: n.p + k })) });
+  // Stil-Fassungen erben Akkorde, Liedteile (und ggf. Pedal) von einer Grundfassung ("erbe": "begl1")
+  const erbe = (f.erbe && song.fassungen.find((x) => x.id === f.erbe)) || {};
   song.spuren = [...(f.spuren || g.spuren.filter((s) => s.id !== 'gesang')).map(kopie), kopie(gesang)];
-  song.pedal = f.pedal || g.pedal;
-  song.akkorde = (f.akkorde || g.akkorde).map((a) => ({ ...a, sym: transponiereAkkord(a.sym, k, ton.kreuz) }));
-  song.abschnitte = (f.abschnitte || g.abschnitte).map((a) => ({ ...a }));
+  song.pedal = f.pedal || erbe.pedal || g.pedal;
+  song.akkorde = (f.akkorde || erbe.akkorde || g.akkorde).map((a) => ({ ...a, sym: transponiereAkkord(a.sym, k, ton.kreuz) }));
+  song.abschnitte = (f.abschnitte || erbe.abschnitte || g.abschnitte).map((a) => ({ ...a }));
   song.anfang = f.anfang_b != null ? zeitAusBeat(song, f.anfang_b) : 0;
   vorbereiten(song);
   if (song.zeilen?.length) zeilenVerknuepfen(song);

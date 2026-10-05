@@ -1,6 +1,6 @@
 // Tastenlicht – iPad-Fassung: alles zusammenstecken und die Bildschleife starten.
 // Alle liedbezogenen Inhalte kommen zur Laufzeit aus daten/ und audio/ (im Netz verschluesselt).
-import { ladeSong, zeitAusBeat, beatAusZeit, akkordBei, setzeFassung } from './song.js';
+import { ladeSong, zeitAusBeat, beatAusZeit, akkordBei, setzeFassung, baukastenSetzen, abschnittBei } from './song.js';
 import { Einstellungen, speicher } from './einstellungen.js';
 import { AudioEngine } from './audio.js';
 import { notenName, akkordName, akkordTone } from './notennamen.js';
@@ -30,8 +30,14 @@ const STANDARD = {
   uebeweg: { laenge: 2, startTempo: 60, zielTempo: 100, pauseEinzaehlen: true, tagesZiel: 15, nachfragen: true },
   geraet: { wachHalten: true, pedal: 'geklappt' },
   fassung: 'begl3',
+  baukasten: baukastenVorschlagWerte(),             // Mein Arrangement: je Liedteil ein Begleit-Stil
   tempo: 1,
 };
+
+function baukastenVorschlagWerte() {
+  // je Liedteil (t0 = Vorspiel, t1 = Strophe 1 … t7 = Ausklang)
+  return { t0: 'intim2', t1: 'intim2', t2: 'orig2', t3: 'orig2', t4: 'pop2', t5: 'pop3', t6: 'orig3', t7: 'neo2' };
+}
 
 // ---------------------------------------------------------------- Lade- und Startbildschirm
 function karte(app, html) {
@@ -78,6 +84,8 @@ async function aufbauen(app, lade) {
     if (silben.length === basis.length) basis.forEach((n, i) => { n.silbe = silben[i]; });
     else if (basis.length) basis[0].silbe = z.text.split(/\s+/)[0];
   }
+  baukastenSetzen(song, einst.get('baukasten'));    // "Mein Arrangement" steht immer bereit
+  if (!song.fassungen.some((f) => f.id === einst.get('fassung'))) einst.set('fassung', 'begl3', { still: true });
   setzeFassung(song, einst.get('fassung'), einst.get('klang.transposition') || 0);
   const engine = new AudioEngine();
   const tr = new Transport(engine, song);
@@ -169,15 +177,82 @@ async function aufbauen(app, lade) {
     tr.alleGeplantenStoppen();
     const uebewegLief = uw.aktiv;
     if (uebewegLief) uw.beenden();
+    if (id === 'mix') baukastenSetzen(song, einst.get('baukasten'));
     setzeFassung(song, id, einst.get('klang.transposition') || 0);
     sicht.noten = song.alleNoten; sicht.takte = song.takte; sicht.akkorde = song.akkorde;
     if (!tr.loop.aktiv) tr.loop = { a: song.anfang, b: song.ende, aktiv: false };
     bereichAnwenden(); filterAnwenden();
     tr.seek(Math.max(song.anfang, Math.min(pos, song.ende)), { weiter: tr.spielt });
     ui.zustandSync();
-    ui.toast(song.transposition ? `${song.fassung.name} · ${song.tonartName}` : song.fassung.name);
+    const stil = (song.stile || []).find((x) => x.id === song.fassung.stil);
+    ui.toast(`${song.fassung.name}${song.transposition ? ` · ${song.tonartName}` : ''}${stil ? ` – ${stil.kurz}` : ''}`, stil ? 2600 : 1900);
     if (uebewegLief) uw.starten();
   };
+
+  // ------------------------------------------------------------------ Begleit-Stile: Wahl, Karussell, Muster, Akkord-Modus
+  const stilListe = () => ['song', ...(song.stile || []).map((s) => s.id), 'mix'];
+  const fassungFuer = (stil, stufe) => {
+    if (stil === 'song' || stil === 'mix') return stil;
+    const liste = song.fassungen.filter((f) => f.stil === stil).sort((a, b) => a.stufe - b.stufe);
+    if (!liste.length) return 'begl3';
+    return (liste.find((f) => f.stufe === stufe) || liste[stufe > liste.length ? liste.length - 1 : Math.min(1, liste.length - 1)]).id;
+  };
+  let gemerkteStufe = song.fassung.stufe || 2;
+  const stilWaehlen = (stil) => {
+    if (stil === 'weiter') { const l = stilListe(); stil = l[(l.indexOf(song.fassung.stil || (song.fassung.id === 'song' ? 'song' : 'standard')) + 1) % l.length]; }
+    if (song.fassung.stufe) gemerkteStufe = song.fassung.stufe;
+    einst.set('fassung', fassungFuer(stil, gemerkteStufe));
+  };
+  const stufeWaehlen = (stufe) => {
+    const stil = song.fassung.stil;
+    if (!stil || stil === 'mix') return;
+    const liste = song.fassungen.filter((f) => f.stil === stil).sort((a, b) => a.stufe - b.stufe);
+    if (stufe === 'weiter') stufe = (song.fassung.stufe % liste.length) + 1;
+    gemerkteStufe = stufe;
+    einst.set('fassung', fassungFuer(stil, stufe));
+  };
+  let karussell = null;
+  const karussellUmschalten = () => {
+    if (karussell) { karussell(); karussell = null; ui.toast('Stil-Karussell aus'); return; }
+    if (uw.aktiv) uw.beenden();
+    const stufe = song.fassung.stufe || gemerkteStufe || 2;
+    const reihe = (song.stile || []).map((s) => fassungFuer(s.id, stufe));
+    if (!tr.loop.aktiv) { const ab = abschnittBei(song, Math.max(0, tr.pos)); tr.setLoop(ab.t, ab.te, true); }
+    let i = Math.max(0, reihe.indexOf(song.fassung.id));
+    einst.set('fassung', reihe[i]);
+    karussell = tr.on('loop', () => { i = (i + 1) % reihe.length; setTimeout(() => einst.set('fassung', reihe[i]), 0); });
+    ui.toast('Stil-Karussell: nach jedem Durchgang der nächste Stil', 2600);
+    if (!tr.spielt) { engine.aufwecken(); tr.play({ einzaehlen: 4 }); }
+  };
+  const musterUeben = () => {
+    if (uw.aktiv) uw.beenden();
+    const ab = abschnittBei(song, Math.max(song.anfang, tr.pos));
+    const b0 = Math.round(beatAusZeit(song, ab.t) / 4) * 4;
+    tr.setLoop(zeitAusBeat(song, b0), zeitAusBeat(song, b0 + 8), true);
+    tr.seek(zeitAusBeat(song, b0), { weiter: false });
+    tr.setSpeed(0.7); einst.set('tempo', 0.7);
+    const sb = (song.stile || []).find((x) => x.id === song.fassung.stil)?.steckbrief;
+    ui.toast(`Muster üben: ${ab.name}, 2 Takte, 70 %${sb ? ` – ${sb.muster}` : ''}`, 4200);
+    ui.zustandSync();
+  };
+  let akkordVorher = null;
+  const akkordModusUmschalten = () => {
+    const karte = document.getElementById('musterKarte');
+    if (akkordVorher) {
+      for (const [k, v] of Object.entries(akkordVorher)) einst.set(k, v);
+      akkordVorher = null;
+      karte.classList.add('versteckt');
+      ui.toast('Noten wieder sichtbar');
+      return;
+    }
+    akkordVorher = { 'ansicht.notenVerstecken': einst.get('ansicht.notenVerstecken'), 'ansicht.akkordTasten': einst.get('ansicht.akkordTasten'), 'ansicht.akkordSpur': einst.get('ansicht.akkordSpur'), 'ansicht.akkordHud': einst.get('ansicht.akkordHud') };
+    einst.set('ansicht.notenVerstecken', 'ganz'); einst.set('ansicht.akkordTasten', true); einst.set('ansicht.akkordSpur', true); einst.set('ansicht.akkordHud', true);
+    const sb = (song.stile || []).find((x) => x.id === song.fassung.stil)?.steckbrief;
+    document.getElementById('musterText').textContent = sb ? sb.muster : 'Spiel die Akkorde in deinem eigenen Muster.';
+    karte.classList.remove('versteckt');
+    ui.toast('Nach Akkorden spielen: Noten aus, Akkordtöne als Punkte', 3200);
+  };
+  const baukastenVorschlag = () => { einst.set('baukasten', baukastenVorschlagWerte()); if (song.fassung.id === 'mix') fassungWechseln('mix'); ui.toast('Vorschlag geladen'); };
 
   // ------------------------------------------------------------------ Oberflaeche
   let textAnsicht = null;
@@ -208,7 +283,8 @@ async function aufbauen(app, lade) {
       ui.zustandSync();
     },
     schleifeSetzen: (a, b) => { tr.setLoop(a, b, true); if (tr.pos < a || tr.pos > b) tr.seek(a, { weiter: tr.spielt }); ui.zustandSync(); },
-    uebewegUmschalten: () => { engine.aufwecken(); if (uw.aktiv) uw.beenden(); else uw.starten(); ui.zustandSync(); },
+    uebewegUmschalten: () => { engine.aufwecken(); if (karussell) karussellUmschalten(); if (uw.aktiv) uw.beenden(); else uw.starten(); ui.zustandSync(); },
+    stilWaehlen, stufeWaehlen, karussellUmschalten, karussellAktiv: () => !!karussell, musterUeben, akkordModusUmschalten, baukastenVorschlag,
     textOeffnen: async (nr = null) => {
       tr.pause();
       const w = document.getElementById('textWurzel');
@@ -254,6 +330,7 @@ async function aufbauen(app, lade) {
     if (alles || pfad.startsWith('klang')) klangAnwenden();
     if (alles || pfad === 'klang.spurQuelle') spurAnwenden();
     if (alles || pfad === 'fassung') { if (song.fassung.id !== einst.get('fassung')) fassungWechseln(einst.get('fassung')); }
+    if (alles || pfad.startsWith('baukasten')) { if (song.fassung.id === 'mix') fassungWechseln('mix'); else baukastenSetzen(song, einst.get('baukasten')); }
     if (alles || pfad === 'klang.transposition') { if ((einst.get('klang.transposition') || 0) !== song.transposition) { fassungWechseln(song.fassung.id); spurAnwenden(); } }
     if (pfad === 'ebenenVorlage' && EBENEN_VORLAGEN[einst.get('ebenenVorlage')]) einst.set('schichten', { ...EBENEN_VORLAGEN[einst.get('ebenenVorlage')] });
     if (alles || pfad.startsWith('schichten') || pfad === 'spiel.hand' || pfad === 'klang.gesangsfuehrung') filterAnwenden();
@@ -329,6 +406,8 @@ async function aufbauen(app, lade) {
       case 'KeyU': aktionen.uebewegUmschalten(); break;
       case 'KeyL': aktionen.schleifeUmschalten(); break;
       case 'KeyM': einst.set('spiel.metronom', !einst.get('spiel.metronom')); break;
+      case 'KeyK': if (ev.shiftKey) stufeWaehlen('weiter'); else stilWaehlen('weiter'); break;
+      case 'KeyJ': akkordModusUmschalten(); break;
       case 'Escape': ui.blattZu(); document.getElementById('akkordblatt').classList.add('versteckt'); break;
       default: break;
     }

@@ -46,6 +46,7 @@ export class Oberflaeche {
       <div id="akkordHud" class="glas"><div class="akk" id="uiAkk"></div><div class="stufe" id="uiStufe"></div><div class="naechster"><span>dann</span> <b id="uiAkkN"></b></div></div>
       <div id="liedtext"><div class="zeile" id="ltAktuell"></div><div class="laut" id="ltLaut"></div><div class="naechste" id="ltNaechste"></div></div>
       <div id="einzaehler"></div>
+      <div id="musterKarte" class="glas versteckt"><b>Nach Akkorden spielen</b><span id="musterText"></span></div>
       <section id="coach" class="glas versteckt" aria-live="polite">
         <div class="coachkopf"><span class="etappe" id="coEtappe"></span>
           <button class="knopf" id="coPfad" aria-label="Lernpfad"></button><button class="knopf" id="coZu" aria-label="Übeweg beenden"></button></div>
@@ -79,7 +80,8 @@ export class Oberflaeche {
             <button class="knopf rund" id="btnSchneller" aria-label="Schneller"></button>
           </div>
           <div class="gruppe">
-            <select id="selFassung" class="fassung nur-gross" aria-label="Fassung"></select>
+            <select id="selStil" class="fassung nur-gross" aria-label="Fassung und Begleit-Stil"></select>
+            <select id="selStufe" class="stufe nur-gross" aria-label="Stufe"></select>
             <div class="segmente nur-gross" id="segHand" aria-label="Du spielst">
               <button data-wert="nichts">Hören</button><button data-wert="L">Links</button><button data-wert="beide">Beide</button><button data-wert="R">Rechts</button>
             </div>
@@ -155,10 +157,18 @@ export class Oberflaeche {
     $('blattHinter').onclick = () => this.blattZu();
     $('abZu').onclick = () => $('akkordblatt').classList.add('versteckt');
     $('abDrucken').onclick = () => window.print();
-    const sf = $('selFassung');
+    // Fassung in zwei Schritten: Stil (Song, Begleit-Stile, Mein Arrangement) und Stufe
+    const sf = $('selStil');
     sf.innerHTML = '';
-    for (const f of this.song.fassungen) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; sf.appendChild(o); }
-    sf.onchange = (ev) => { e.set('fassung', ev.target.value); ev.target.blur(); };
+    const opt = (wert, text) => { const o = document.createElement('option'); o.value = wert; o.textContent = text; return o; };
+    sf.appendChild(opt('song', 'Song (mit Melodie)'));
+    const gruppe = document.createElement('optgroup');
+    gruppe.label = 'Begleitung zum Singen';
+    for (const st of this.song.stile || []) gruppe.appendChild(opt(st.id, st.name));
+    gruppe.appendChild(opt('mix', 'Mein Arrangement'));
+    sf.appendChild(gruppe);
+    sf.onchange = (ev) => { a.stilWaehlen(ev.target.value); ev.target.blur(); };
+    $('selStufe').onchange = (ev) => { a.stufeWaehlen(Number(ev.target.value)); ev.target.blur(); };
     $('selSpur').onchange = (ev) => { e.set('klang.spurQuelle', ev.target.value); ev.target.blur(); };
     for (const b of $('segHand').querySelectorAll('button')) b.onclick = () => e.set('spiel.hand', b.dataset.wert);
     // Coach
@@ -187,7 +197,7 @@ export class Oberflaeche {
     const e = this.einst, s = this.song;
     $('uiTitel').textContent = s.titel || '';
     $('uiUnter').textContent = [s.kuenstlerin, s.fassung?.name, s.tonartName || 'Des-Dur'].filter(Boolean).join(' · ');
-    $('selFassung').value = s.fassung.id;
+    this.stilAuswahlSync();
     $('selSpur').value = e.get('klang.spurQuelle');
     for (const b of $('segHand').querySelectorAll('button')) b.classList.toggle('an', b.dataset.wert === e.get('spiel.hand'));
     $('btnMetronom').classList.toggle('an', !!e.get('spiel.metronom'));
@@ -202,6 +212,23 @@ export class Oberflaeche {
     $('liedtext').classList.toggle('gross', !!e.get('liedtext.gross'));
     $('akkordHud').classList.toggle('versteckt', !e.get('ansicht.akkordHud'));
     this.zeileJetzt = undefined;
+  }
+
+  stilAuswahlSync() {
+    const $ = (id) => document.getElementById(id);
+    const f = this.song.fassung;
+    const stil = f.id === 'song' ? 'song' : f.stil || 'standard';
+    $('selStil').value = stil;
+    const stufen = stil === 'song' || stil === 'mix' ? [] : this.song.fassungen.filter((x) => x.stil === stil).sort((a, b) => a.stufe - b.stufe);
+    const sel = $('selStufe');
+    const sig = stufen.map((x) => x.id).join('|');
+    if (sel.dataset.sig !== sig) {
+      sel.dataset.sig = sig;
+      sel.innerHTML = '';
+      for (const x of stufen) { const o = document.createElement('option'); o.value = String(x.stufe); o.textContent = `${x.stufe} · ${x.stufeName}`; sel.appendChild(o); }
+    }
+    sel.classList.toggle('versteckt', !stufen.length);
+    if (stufen.length) sel.value = String(f.stufe);
   }
 
   // ================================================================== pro Bild
@@ -503,7 +530,7 @@ export class Oberflaeche {
   reiterBauen() {
     const nav = document.getElementById('blattReiter');
     nav.innerHTML = '';
-    for (const [id, name] of [['ueben', 'Üben'], ['ansicht', 'Ansicht'], ['klang', 'Klang'], ['uebeweg', 'Übeweg'], ['info', 'Hilfe']]) {
+    for (const [id, name] of [['stile', 'Stile'], ['ueben', 'Üben'], ['ansicht', 'Ansicht'], ['klang', 'Klang'], ['uebeweg', 'Übeweg'], ['info', 'Hilfe']]) {
       const b = el('button', this.reiter === id ? 'an' : '');
       b.textContent = name;
       b.onclick = () => { this.reiter = id; this.reiterBauen(); this.einstellungenBauen(); };
@@ -517,6 +544,7 @@ export class Oberflaeche {
     const T = (txt) => box.appendChild(el('div', 'abschnittstitel', esc(txt)));
     const F = (f) => box.appendChild(this.feldBauen(f));
     const r = this.reiter;
+    if (r === 'stile') { this.stileBauen(box); return; }
     if (r === 'ueben') {
       T('Was spielst du?');
       F({ p: 'spiel.hand', l: 'Du spielst', t: 'auswahl', o: [['nichts', 'nichts – nur hören'], ['L', 'linke Hand'], ['R', 'rechte Hand'], ['beide', 'beide Hände']], h: 'Deine Hand ist stumm und leuchtet, die App spielt den Rest' });
@@ -591,6 +619,80 @@ export class Oberflaeche {
     }
   }
 
+  // Reiter "Stile": Steckbrief, Stil- und Stufenwahl, Karussell, Muster, Akkord-Modus, Baukasten
+  stileBauen(box) {
+    const s = this.song, f = s.fassung, a = this.aktionen;
+    const stilId = f.id === 'song' ? 'song' : f.stil || 'standard';
+    const stil = (s.stile || []).find((x) => x.id === stilId);
+    const sb = stil?.steckbrief;
+    box.innerHTML = `
+      <div class="stil-steckbrief">
+        <div class="stil-kopf"><b>${esc(stil ? stil.name : f.id === 'song' ? 'Song (mit Melodie)' : 'Mein Arrangement')}</b>${f.stufeName ? `<span>Stufe ${f.stufe} · ${esc(f.stufeName)}</span>` : ''}</div>
+        ${sb ? `<p>${esc(sb.idee)}</p><div class="stil-muster">${esc(sb.muster)}</div><p class="text-hilfe"><b>Übe-Tipp:</b> ${esc(sb.tipp)}<br><b>Klingt nach:</b> ${esc(sb.hoeren)}</p>`
+    : `<p class="text-hilfe">${f.id === 'song' ? 'Die Klavierfassung mit Melodie. Für die Begleit-Stile einen Stil wählen.' : 'Dein Mix aus den Stilen – unten je Liedteil einstellen.'}</p>`}
+        ${f.beschreibung && f.art === 'begleitung' ? `<p class="text-hilfe">Diese Stufe: ${esc(f.beschreibung)}</p>` : ''}
+      </div>
+      <div class="abschnittstitel">Stil wählen</div>
+      <div class="stil-liste" id="stilListe"></div>
+      <div class="abschnittstitel">Stufe</div>
+      <div class="stil-stufen" id="stufenReihe"></div>
+      <div class="abschnittstitel">Hören & Üben</div>
+      <div class="stil-stufen">
+        <button class="knopf" id="stKarussell">${a.karussellAktiv?.() ? 'Karussell stoppen' : 'Stil-Karussell'}</button>
+        <button class="knopf" id="stMuster">Muster üben</button>
+        <button class="knopf" id="stAkkord">Nach Akkorden spielen</button>
+      </div>
+      <p class="text-hilfe">Karussell: Der Liedteil läuft in Schleife, nach jedem Durchgang kommt der nächste Stil. Muster üben: zwei Takte langsam in Schleife. Nach Akkorden spielen: Noten aus, Akkordtöne als Punkte – spiel das Muster frei.</p>
+      <div class="abschnittstitel">Mein Arrangement – je Liedteil ein Stil</div>
+      <div id="baukasten"></div>
+      <div class="stil-stufen">
+        <button class="knopf" id="bkVorschlag">Vorschlag laden</button>
+        <button class="knopf akzent" id="bkSpielen">Mein Arrangement spielen</button>
+      </div>`;
+    const liste = document.getElementById('stilListe');
+    for (const st of [{ id: 'song', name: 'Song (mit Melodie)', kurz: 'Klavierfassung mit Melodie' }, ...(s.stile || []), { id: 'mix', name: 'Mein Arrangement', kurz: 'dein Mix aus den Stilen' }]) {
+      const b = el('button', `stil-knopf${st.id === stilId ? ' an' : ''}`, '<b></b><span></span>');
+      b.querySelector('b').textContent = st.name;
+      b.querySelector('span').textContent = st.kurz;
+      b.onclick = () => { a.stilWaehlen(st.id); this.stileBauen(box); };
+      liste.appendChild(b);
+    }
+    const reihe = document.getElementById('stufenReihe');
+    const stufen = s.fassungen.filter((x) => x.stil === stilId && stilId !== 'mix').sort((x, y) => x.stufe - y.stufe);
+    if (!stufen.length) reihe.innerHTML = '<span class="text-hilfe">–</span>';
+    for (const x of stufen) {
+      const b = el('button', `knopf${x.id === f.id ? ' an' : ''}`);
+      b.textContent = `${x.stufe} · ${x.stufeName}`;
+      b.onclick = () => { a.stufeWaehlen(x.stufe); this.stileBauen(box); };
+      reihe.appendChild(b);
+    }
+    document.getElementById('stKarussell').onclick = () => { a.karussellUmschalten(); this.blattZu(); };
+    document.getElementById('stMuster').onclick = () => { a.musterUeben(); this.blattZu(); };
+    document.getElementById('stAkkord').onclick = () => { a.akkordModusUmschalten(); this.blattZu(); };
+    const bk = document.getElementById('baukasten');
+    const basis = s.fassungen.find((x) => x.id === 'begl1');
+    const wahl = this.einst.get('baukasten') || {};
+    for (const [i, ab] of (basis?.abschnitte || []).entries()) {
+      const zeile = el('div', 'feld', '<label></label><select></select>');
+      zeile.querySelector('label').textContent = ab.name;
+      const sel = zeile.querySelector('select');
+      sel.setAttribute('aria-label', ab.name);
+      for (const st of s.stile || []) {
+        const g = document.createElement('optgroup');
+        g.label = st.name;
+        for (const x of s.fassungen.filter((y) => y.stil === st.id).sort((p, q) => p.stufe - q.stufe)) {
+          const o = el('option'); o.value = x.id; o.textContent = `${st.name} · ${x.stufeName}`; g.appendChild(o);
+        }
+        sel.appendChild(g);
+      }
+      sel.value = wahl[`t${i}`] || 'begl3';
+      sel.onchange = () => { this.einst.set(`baukasten.t${i}`, sel.value); sel.blur(); };
+      bk.appendChild(zeile);
+    }
+    document.getElementById('bkVorschlag').onclick = () => { a.baukastenVorschlag(); this.stileBauen(box); };
+    document.getElementById('bkSpielen').onclick = () => { a.stilWaehlen('mix'); this.blattZu(); };
+  }
+
   feldBauen(f) {
     const zeile = el('div', 'feld');
     const lab = el('label');
@@ -633,6 +735,9 @@ export class Oberflaeche {
     titel.querySelector('div').textContent = [s.kuenstlerin, tonart, `${s.bpm} BPM`, s.fassung.art === 'begleitung' ? 'Begleitung zum Singen' : 'Klavierfassung'].filter(Boolean).join(' · ');
     box.appendChild(titel);
     document.getElementById('abTitel').textContent = `Akkordblatt · ${tonart}`;
+    // Spickzettel: Muster des gewaehlten Begleit-Stils
+    const stilSb = (s.stile || []).find((x) => x.id === s.fassung.stil)?.steckbrief;
+    if (stilSb) { const m = el('div', 'blatt-muster', '<b></b> <span></span>'); m.querySelector('b').textContent = `${s.fassung.name}:`; m.querySelector('span').textContent = stilSb.muster; box.appendChild(m); }
     for (const ab of s.abschnitte) {
       const teil = el('div', 'blatt-teil', '<h2></h2>');
       teil.querySelector('h2').textContent = ab.name;
