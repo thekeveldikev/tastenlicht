@@ -6,7 +6,7 @@ import { AudioEngine } from './audio.js';
 import { notenName, akkordName, akkordTone } from './notennamen.js';
 import { Transport } from './transport.js';
 import { Buehne, THEMEN } from './buehne.js';
-import { Oberflaeche, EBENEN_VORLAGEN } from './ui.js';
+import { Oberflaeche, EBENEN_VORLAGEN, reglerFuellen } from './ui.js';
 import { Uebeweg } from './uebeweg.js';
 import { mische } from './effekte.js';
 import { zeilenSilben } from './silben.js';
@@ -25,13 +25,15 @@ const STANDARD = {
   },
   effekte: { aufprall: true, bloom: 0.5, funken: false, pulse: false, sterne: false, aurora: false },
   klang: { master: 0.9, klavier: 0.9, spur: 0.85, metronom: 0.7, hall: 0.3, spurQuelle: 'keine', gesangsfuehrung: 0, transposition: 0, spurVersatz: 0 },
-  spiel: { hand: 'nichts', einzaehlen: 1, metronom: false },
+  spiel: { hand: 'nichts', einzaehlen: 1, einzaehlKlick: true, metronom: false },
   schichten: { mel: true, harm: true, fill: true, bass: true, acc: true },
   ebenenVorlage: 'voll',
   liedtext: { anzeigen: true, lautschrift: false, position: 'oben', gross: false },
   text: { ...TEXT_STANDARD },                       // Einstellungen der Text-Ansicht (Lautschule)
   blatt: { ...BLATT_STANDARD },                     // Liedblatt: Akkorde ueber dem Text
-  uebeweg: { laenge: 2, startTempo: 60, zielTempo: 100, pauseEinzaehlen: true, tagesZiel: 15, nachfragen: true },
+  // abschnitt: kurz (1 Takt) | mittel (2) | lang (4) · schleife: Abschnitt laeuft, bis "Geschafft" · reihenfolge: abschnitt | hand
+  // treppe: in der Schleife jede Runde 5 % schneller · mini: Uebe-Karte eingeklappt
+  uebeweg: { abschnitt: 'kurz', schleife: false, reihenfolge: 'abschnitt', treppe: false, mini: false, startTempo: 60, zielTempo: 100, pauseEinzaehlen: true, tagesZiel: 15 },
   geraet: { wachHalten: true, pedal: 'geklappt', start: 'auto' },   // start: auto | start | klavier | text | liedblatt
   fassung: 'begl3',
   baukasten: baukastenVorschlagWerte(),             // Mein Arrangement: je Liedteil ein Begleit-Stil
@@ -291,7 +293,7 @@ async function aufbauen(app, lade) {
     if (t < tr.loop.a - 0.05 || t >= tr.loop.b) { tr.loopAus(); ui.toast('Schleife aus'); ui.zustandSync(); }
   };
   const aktionen = {
-    umschalten: () => { engine.aufwecken(); if (uw.aktiv && uw.wartetAufUrteil) { uw.werten(true); return; } tr.umschalten({ einzaehlen: (einst.get('spiel.einzaehlen') || 0) * 4 }); },
+    umschalten: () => { engine.aufwecken(); if (uw.aktiv && uw.wartetAufUrteil) { uw.nochmal(); return; } tr.umschalten({ einzaehlen: (einst.get('spiel.einzaehlen') || 0) * 4 }); },
     zumAnfang: () => { const z = tr.loop.aktiv ? tr.loop.a : song.anfang; tr.seek(z, { weiter: tr.spielt }); },
     springen: (t) => { schleifeVerlassen(t); tr.seek(t, { weiter: tr.spielt }); },
     taktSprung: (n) => {
@@ -379,6 +381,7 @@ async function aufbauen(app, lade) {
       if (!aufnahme && (art === 'original' || art === 'gesang')) ui.toast('Die Aufnahme gibt es nur in Des-Dur – jetzt spielt das Klavier', 2600);
     },
     uebewegAktiv: () => uw.aktiv,
+    uebewegStand: () => { try { if (!uw.aktiv) { uw.laden(); uw.planBauen(); } return uw.fortschritt(); } catch { return null; } },
     startOeffnen: () => {
       tr.pause();
       if (!startseite) startseite = new StartSeite({ wurzel: document.getElementById('startWurzel'), song, einst, speicher, engine, aktionen, handy });
@@ -396,6 +399,10 @@ async function aufbauen(app, lade) {
   };
   const ui = new Oberflaeche({ app, song, einst, tr, engine, buehne, uw, aktionen, phon: null });
   ui.bauen();
+  // alle Regler der App (auch Liedblatt und Text) zeigen ihren Wert als gefuellte Spur
+  const reglerAlle = () => { for (const r of document.querySelectorAll('input[type=range]')) reglerFuellen(r); };
+  document.addEventListener('input', (ev) => { if (ev.target && ev.target.type === 'range') reglerFuellen(ev.target); }, true);
+  setInterval(reglerAlle, 500);
   updateEinrichten({ toast: (t, ms) => ui.toast(t, ms) });
 
   // Lautschrift fuer den Liedtext (wird nachgeladen; ohne sie geht alles andere auch)
@@ -408,6 +415,7 @@ async function aufbauen(app, lade) {
   bereichAnwenden(); klangAnwenden(); filterAnwenden(); spurAnwenden();
   tr.setSpeed(einst.get('tempo') || 1);
   tr.metronom = einst.get('spiel.metronom');
+  tr.einzaehlKlick = einst.get('spiel.einzaehlKlick') !== false;
   einst.beiAenderung((pfad) => {
     const alles = pfad === '*';
     if (alles || pfad.startsWith('ansicht.thema') || pfad === 'spiel.hand') farbeCache.clear();
@@ -419,9 +427,11 @@ async function aufbauen(app, lade) {
     if (pfad === 'ebenenVorlage' && EBENEN_VORLAGEN[einst.get('ebenenVorlage')]) einst.set('schichten', { ...EBENEN_VORLAGEN[einst.get('ebenenVorlage')] });
     if (alles || pfad.startsWith('schichten') || pfad === 'spiel.hand' || pfad === 'klang.gesangsfuehrung') filterAnwenden();
     if (alles || pfad === 'spiel.metronom') tr.metronom = einst.get('spiel.metronom');
-    if (pfad.startsWith('uebeweg') && uw.aktiv) {
-      tr.loopEinzaehlen = einst.get('uebeweg.pauseEinzaehlen') ? 4 : 0;
-      if (pfad === 'uebeweg.laenge') { uw.beenden(); uw.starten(); }
+    if (alles || pfad === 'spiel.einzaehlKlick') tr.einzaehlKlick = einst.get('spiel.einzaehlKlick') !== false;
+    if (uw.aktiv && (pfad.startsWith('uebeweg') || pfad.startsWith('spiel.einzaehl'))) {
+      uw.einzaehlAnwenden();
+      if (pfad === 'uebeweg.abschnitt' || pfad === 'uebeweg.reihenfolge') uw.neuEinteilen();
+      if (pfad === 'uebeweg.schleife') { uw.nachricht = einst.get('uebeweg.schleife') ? 'Schleife an: der Abschnitt läuft, bis du „Geschafft“ tippst.' : 'Schleife aus: nach jedem Durchgang hält die App an.'; ui.coachRender(); }
     }
     if (alles) tr.setSpeed(einst.get('tempo') || 1);
     ui.zustandSync();
@@ -572,6 +582,10 @@ async function aufbauen(app, lade) {
       case 'ArrowUp': ev.preventDefault(); aktionen.tempoAendern(0.05); break;
       case 'ArrowDown': ev.preventDefault(); aktionen.tempoAendern(-0.05); break;
       case 'KeyU': aktionen.uebewegUmschalten(); break;
+      case 'KeyN': if (uw.aktiv) uw.nochmal(); break;
+      case 'KeyH': if (uw.aktiv) uw.vorspielen(); break;
+      case 'KeyS': if (uw.aktiv) einst.set('uebeweg.schleife', !einst.get('uebeweg.schleife')); break;
+      case 'KeyZ': if (uw.aktiv) uw.teilZusammen(); break;
       case 'KeyL': aktionen.schleifeUmschalten(); break;
       case 'KeyM': einst.set('spiel.metronom', !einst.get('spiel.metronom')); break;
       case 'KeyK': if (ev.shiftKey) stufeWaehlen('weiter'); else stilWaehlen('weiter'); break;
@@ -653,6 +667,7 @@ async function aufbauen(app, lade) {
     buehne.setReserve(sh + 20);
     if (sh !== bild.sh) { bild.sh = sh; document.documentElement.style.setProperty('--steuerH', `${sh}px`); }
     const t = tr.update();
+    if (buehne.thema !== (THEMEN[einst.werte.ansicht.thema] || THEMEN.nacht)) buehne.setThema(einst.werte.ansicht.thema);   // Farben auch fuer Hintergrund, Linie, Leuchten
     buehne.setOptionen({ ...einst.werte.ansicht, vorzeichen: song.transposition && song.kreuzTonart ? '#' : einst.werte.ansicht.vorzeichen, tonika: song.transposition, effekte: einst.werte.effekte });
     sicht.t = t;
     sicht.speed = tr.speed;

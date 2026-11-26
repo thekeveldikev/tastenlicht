@@ -57,7 +57,16 @@ export class StartSeite {
     const zl = this.einst.get('zuletzt') || {};
     const ab = zl.pos > 4 ? (this.song.abschnitte || []).filter((x) => x.t <= zl.pos).pop() : null;
     const weiter = zl.pos > 4 ? `Weiter bei ${Math.floor(zl.pos / 60)}:${String(Math.floor(zl.pos % 60)).padStart(2, '0')}${ab ? ` · ${ab.name.replace(/\s*–.*$/, '').replace(/\s*\(.*\)$/, '')}` : ''}` : null;
-    return { weiter, heuteMin: sek(heute) / 60, ziel, serie, woche, sicher, zeilenGesamt: zeilen.length, faellig, uwBegonnen: !!(uw && uw.etappen && Object.keys(uw.etappen).length), etappenFertig };
+    // Uebeweg: wo es weitergeht (Liedteil, Takt, Hand)
+    let uwWeiter = null;
+    if (uw && uw.aktuellVonB != null) {
+      const takt = Math.floor(uw.aktuellVonB / 4) + 1;
+      const teil = takt < 1 ? 'Vorspiel' : ((this.song.abschnitte || []).find((x) => x.von <= takt && takt <= x.bis) || {}).name;
+      const hand = { L: 'links', R: 'rechts', B: 'beide Hände', T: 'im Tempo', S: 'singen' }[uw.aktuellSt] || '';
+      const zus = String(uw.aktuellId || '').startsWith('d');
+      uwWeiter = `Weiter: ${teil ? teil.replace(/\s*–.*$/, '') : ''}${zus ? ' · alle zusammen' : takt >= 1 ? ` · Takt ${takt}` : ''}${hand ? ` · ${hand}` : ''}`;
+    }
+    return { weiter, uwWeiter, heuteMin: sek(heute) / 60, ziel, serie, woche, sicher, zeilenGesamt: zeilen.length, faellig, uwBegonnen: !!(uw && uw.etappen && Object.keys(uw.etappen).length), etappenFertig };
   }
 
   gruss() {
@@ -93,6 +102,7 @@ export class StartSeite {
     const kachel = (id, sym, titel, unter, klasse = '', marke = '') =>
       `<button type="button" class="st-kachel ${klasse}" data-a="${id}"><span class="st-ksym">${symbol(sym)}</span><span class="st-ktext"><b>${esc(titel)}</b><small>${esc(unter)}</small></span>${marke ? `<span class="st-marke">${esc(marke)}</span>` : ''}</button>`;
     const fassungText = stil ? `${stil.name} · Stufe ${s.fassung.stufe}` : s.fassung.name;
+    const uwStand = this.aktionen.uebewegStand?.() || null;
     this.wurzel.innerHTML = `
 <div class="st-app">
   <header class="st-kopf">
@@ -108,14 +118,14 @@ export class StartSeite {
     <div class="st-zahlen">
       <div><b>${z.serie}</b><small>${z.serie === 1 ? 'Tag' : 'Tage'} am Stück</small></div>
       <div><b>${z.sicher}<span>/${z.zeilenGesamt}</span></b><small>Zeilen sicher</small></div>
-      <div><b>${z.etappenFertig}</b><small>Etappen geschafft</small></div>
+      <div><b>${z.etappenFertig}</b><small>Übe-Schritte durch</small></div>
     </div>
     <div class="st-woche" aria-label="Übezeit der letzten 7 Tage">${woche}</div>
     <div class="st-legende"><span><i class="st-k"></i>Klavier</span><span><i class="st-t"></i>Text</span></div>
   </section>
   <section class="st-tipp glas"><div class="st-tipp-kopf">${symbol('hilfe')}<b>Tipp</b><span class="lb-frei"></span><button type="button" class="knopf rund st-tipp-weiter" data-a="tipp" aria-label="Nächster Tipp">${symbol('weiter')}</button></div><p></p></section>
   <section class="st-kacheln">
-    ${kachel('uebeweg', 'pfad', z.uwBegonnen ? 'Übeweg fortsetzen' : 'Übeweg starten', `${fassungText} · Stück für Stück`, 'st-gross st-gruen')}
+    ${kachel('uebeweg', 'pfad', z.uwBegonnen ? 'Übeweg fortsetzen' : 'Übeweg starten', z.uwBegonnen && z.uwWeiter ? z.uwWeiter : `${fassungText} · Stück für Stück`, 'st-gross st-gruen').replace('</small></span>', `</small>${uwStand && uwStand.fertig ? `<span class="st-fortschritt"><i style="width:${(uwStand.anteil * 100).toFixed(1)}%"></i></span>` : ''}</span>`)}
     ${kachel('klavier', 'klavier', 'Klavier', z.weiter || 'Fallende Noten, alle Stile', 'st-blau')}
     ${kachel('liedblatt', 'liedblatt', 'Liedblatt', 'Akkorde über dem Text · mitlaufend', 'st-gold', 'Neu')}
     ${kachel('text', 'lautschule', 'Text lernen', `${z.faellig} Karten fällig · Lautschrift`, 'st-lila')}

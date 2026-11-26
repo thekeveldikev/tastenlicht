@@ -40,6 +40,7 @@ export class Transport {
     this.hoerer = { loop: new Set(), ende: new Set(), zustand: new Set() };
     this.verstimmungCent = 0;
     this.loopEinzaehlen = 0;       // Schlaege Einzaehlen vor jeder Wiederholung (Uebeweg)
+    this.einzaehlKlick = true;     // Einzaehlen hoerbar (sonst nur die Anzeige 4-3-2-1)
     this.klangZiel = 'app';        // 'app' | 'midi' (E-Piano) | 'beide'
     this.ausgabe = null;
     this.ausgabeStopp = null;
@@ -95,9 +96,11 @@ export class Transport {
       const schlag = Math.max(0.2, (zeitAusBeat(this.song, b) - zeitAusBeat(this.song, b - 1)) / this.speed);
       los = c + 0.12 + einzaehlen * schlag;
       this.zaehl = { ende: los, schlag, n: einzaehlen };
-      for (let i = 0; i < einzaehlen; i++) {
-        const k = this.e.klick(los - (einzaehlen - i) * schlag, i % 4 === 0, 1);
-        if (k) this.zaehlKlicks.push(k);
+      if (this.einzaehlKlick) {
+        for (let i = 0; i < einzaehlen; i++) {
+          const k = this.e.klick(los - (einzaehlen - i) * schlag, i % 4 === 0, 1);
+          if (k) this.zaehlKlicks.push(k);
+        }
       }
       this.einzaehlBis = start;
     } else {

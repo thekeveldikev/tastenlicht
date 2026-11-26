@@ -23,7 +23,7 @@ const P = {
   zurueck: '<path d="M15 5l-7 7 7 7"/>',
   wiederholen: '<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/>',
   schildkroete: '<path d="M4 15c0-4 3.6-7 8-7s8 3 8 7z"/><path d="M8 15v3M16 15v3M20 13.5h1.5"/><path d="M9 11.5l3 3.5 3-3.5"/>',
-  ohr: '<path d="M7 9a5 5 0 1 1 9.5 2.2c-.8 1.6-2.5 2.2-2.5 4.3a2.5 2.5 0 0 1-4.6 1.4"/><path d="M10 9.5a2 2 0 1 1 3.4 1.4"/>',
+  ohr: '<path d="M6.5 9.5a5.5 5.5 0 1 1 11 0c0 2.4-1.3 3.6-2.6 4.8-1 .9-1.4 1.8-1.4 3.2a3 3 0 0 1-5.6 1.5"/><path d="M9.5 9.8a2.5 2.5 0 0 1 5 0c0 1.2-.8 1.7-1.6 2.3"/><path d="M3 6.5c.6-1.4 1.5-2.5 2.6-3.3M21 6.5c-.6-1.4-1.5-2.5-2.6-3.3"/>',
   karten: '<rect x="3" y="7" width="13" height="13" rx="2"/><path d="M8 4h11a2 2 0 0 1 2 2v11"/>',
   stern: '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/>',
   ordner: '<path d="M3.5 7.5V18a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5V9.5A1.5 1.5 0 0 0 19 8h-7l-2-2.5H5A1.5 1.5 0 0 0 3.5 7z"/>',
@@ -50,6 +50,13 @@ const P = {
   stift: '<path d="M4 20l1.2-4.6L15.8 4.8a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/>',
   liedblatt: '<rect class="fuell" x="3" y="3.5" width="6" height="4.2" rx="1.2"/><rect class="fuell" x="13.5" y="3.5" width="5" height="4.2" rx="1.2"/><path d="M3 11.2h18"/><rect class="fuell" x="8" y="13.6" width="5.5" height="4.2" rx="1.2"/><path d="M3 21h13"/>',
   einfuegen: '<rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="M9 11h6M9 14.5h6"/>',
+  einklappen: '<path d="M6 14.5l6-6 6 6"/>',
+  ausklappen: '<path d="M6 9.5l6 6 6-6"/>',
+  zusammen: '<rect x="3" y="8" width="5" height="8" rx="1.5"/><rect x="9.5" y="8" width="5" height="8" rx="1.5"/><rect x="16" y="8" width="5" height="8" rx="1.5"/><path d="M3 20h18"/>',
+  treppe: '<path d="M3.5 19.5h4v-4h4v-4h4v-4h5"/><path d="M17 4.5h3.5V8"/>',
+  klickAus: '<path d="M9.2 3h5.6L18.5 21h-13z"/><path d="M8 17.5h8"/><path d="M3.5 3.5l17 17"/>',
+  vor: '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
+  rueck: '<path d="M15 5.5L8.5 12l6.5 6.5"/>',
 };
 
 export function symbol(name) {

@@ -16,6 +16,12 @@ export const EBENEN_VORLAGEN = {
 };
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+// Regler: gefuellter Anteil als CSS-Variable (die Spur malt bis dahin farbig)
+export const reglerFuellen = (r) => {
+  if (!r) return;
+  const min = Number(r.min) || 0, max = Number(r.max) || 100, v = Number(r.value);
+  r.style.setProperty('--p', `${Math.max(0, Math.min(100, ((v - min) / (max - min || 1)) * 100)).toFixed(1)}%`);
+};
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export class Oberflaeche {
@@ -33,12 +39,12 @@ export class Oberflaeche {
     a.insertAdjacentHTML('beforeend', `
       <header id="kopf">
         <div class="titelkarte glas"><div class="titel" id="uiTitel"></div><div class="unter" id="uiUnter"></div></div>
-        <div class="mitte">
+        <div class="mitte"><div class="status glas">
           <span class="pille" id="uiAbschnitt"></span>
           <span class="pille leise" id="uiTakt"></span>
           <span class="pille schlaege" id="uiSchlaege"><i class="eins"></i><i></i><i></i><i></i></span>
           <span class="pille leise" id="uiTempo"></span>
-        </div>
+        </div></div>
         <div class="rechts">
           <button class="knopf rund" id="btnStart" aria-label="Startseite"></button>
           <button class="knopf rund" id="btnText" aria-label="Text lernen"></button>
@@ -51,20 +57,40 @@ export class Oberflaeche {
       <div id="einzaehler"></div>
       <div id="musterKarte" class="glas versteckt"><b>Nach Akkorden spielen</b><span id="musterText"></span></div>
       <section id="coach" class="glas versteckt" aria-live="polite">
-        <div class="coachkopf"><span class="etappe" id="coEtappe"></span>
-          <button class="knopf" id="coPfad" aria-label="Lernpfad"></button><button class="knopf" id="coZu" aria-label="Übeweg beenden"></button></div>
-        <div class="stationen" id="coStationen"></div>
-        <div class="coach-nachricht" id="coNachricht"></div>
-        <div class="durchgaenge" id="coDurchgaenge"></div>
-        <div class="coach-urteil" id="coUrteil">
-          <button class="knopf ja" id="coJa"></button><button class="knopf" id="coNein"></button>
+        <div class="co-kopf">
+          <div class="co-titel"><small id="coTeil"></small><b id="coEtappe"></b></div>
+          <button class="knopf rund klein" id="coMini" aria-label="Übe-Karte einklappen"></button>
+          <button class="knopf rund klein" id="coPfad" aria-label="Lernpfad"></button>
+          <button class="knopf rund klein" id="coZu" aria-label="Übeweg beenden"></button>
         </div>
-        <div class="coach-knoepfe">
-          <button class="knopf" id="coLos"></button>
-          <button class="knopf" id="coWeiter">Überspringen</button>
-          <button class="knopf" id="coTextUeben"></button>
+        <div class="co-weg">
+          <button class="knopf rund klein" id="coZurueck" aria-label="Voriger Schritt"></button>
+          <div class="co-punkte" id="coPunkte"></div>
+          <button class="knopf rund klein" id="coVor" aria-label="Nächster Schritt"></button>
         </div>
-        <div class="coach-fuss" id="coFuss"></div>
+        <div class="co-stationen" id="coStationen"></div>
+        <p class="co-nachricht" id="coNachricht"></p>
+        <div class="co-haupt">
+          <button class="knopf rund co-los" id="coLos" aria-label="Abspielen"></button>
+          <button class="knopf co-ja" id="coJa"></button>
+          <button class="knopf co-nein" id="coNein"></button>
+        </div>
+        <div class="co-mehr">
+          <div class="co-zeile"><span class="co-lab">Abschnitte</span>
+            <div class="segmente klein" id="coLaenge"><button data-wert="kurz">Kurz</button><button data-wert="mittel">Mittel</button><button data-wert="lang">Länger</button></div></div>
+          <div class="co-zeile"><span class="co-lab">Einzählen</span>
+            <div class="segmente klein" id="coZaehl"><button data-wert="aus">Aus</button><button data-wert="still">Still</button><button data-wert="klick">Klick</button></div></div>
+          <div class="co-zeile">
+            <button class="co-chip" id="coSchleife"></button>
+            <div class="co-tempo"><button class="knopf rund klein" id="coLangsamer" aria-label="Langsamer"></button><b id="coTempo"></b><button class="knopf rund klein" id="coSchneller" aria-label="Schneller"></button></div>
+          </div>
+          <div class="co-zeile co-extras">
+            <button class="co-chip" id="coAnhoeren"></button>
+            <button class="co-chip" id="coZusammen"></button>
+            <button class="co-chip" id="coTextUeben"></button>
+          </div>
+        </div>
+        <div class="co-fuss" id="coFuss"></div>
       </section>
       <footer id="steuerung" class="glas">
         <canvas id="zeitleiste"></canvas>
@@ -130,9 +156,16 @@ export class Oberflaeche {
     setzeSymbol($('btnKlein'), 'weiter');
     setzeSymbol($('coPfad'), 'liste');
     setzeSymbol($('coZu'), 'kreuz');
-    setzeSymbol($('coJa'), 'haken', 'Geklappt');
+    setzeSymbol($('coJa'), 'haken', 'Geschafft');
     setzeSymbol($('coNein'), 'wiederholen', 'Nochmal');
-    setzeSymbol($('coTextUeben'), 'lautschule', 'Text üben');
+    setzeSymbol($('coLos'), 'play');
+    setzeSymbol($('coZurueck'), 'rueck');
+    setzeSymbol($('coVor'), 'vor');
+    setzeSymbol($('coLangsamer'), 'minus');
+    setzeSymbol($('coSchneller'), 'plus');
+    setzeSymbol($('coSchleife'), 'schleife', 'Schleife');
+    setzeSymbol($('coAnhoeren'), 'kopfhoerer', 'Anhören');
+    setzeSymbol($('coTextUeben'), 'lautschule', 'Text');
     setzeSymbol($('blattZu'), 'kreuz');
   }
 
@@ -173,20 +206,46 @@ export class Oberflaeche {
     const uw = this.uw;
     $('coZu').onclick = () => a.uebewegUmschalten();
     $('coPfad').onclick = () => this.blattOeffnen('pfad');
-    $('coJa').onclick = () => { this.engine.aufwecken(); uw.werten(true); };
-    $('coNein').onclick = () => { this.engine.aufwecken(); uw.werten(false); };
+    $('coJa').onclick = () => { this.engine.aufwecken(); uw.geschafft(); };
+    $('coNein').onclick = () => { this.engine.aufwecken(); uw.nochmal(); };
     $('coLos').onclick = () => a.umschalten();
-    $('coWeiter').onclick = () => uw.ueberspringen();
+    $('coZurueck').onclick = () => uw.schritt(-1);
+    $('coVor').onclick = () => uw.schritt(1);
+    $('coMini').onclick = () => e.set('uebeweg.mini', !e.get('uebeweg.mini'));
+    $('coSchleife').onclick = () => e.set('uebeweg.schleife', !e.get('uebeweg.schleife'));
+    $('coLangsamer').onclick = () => uw.tempoAendern(-0.05);
+    $('coSchneller').onclick = () => uw.tempoAendern(0.05);
+    $('coAnhoeren').onclick = () => { this.engine.aufwecken(); uw.vorspielen(); };
+    $('coZusammen').onclick = () => { this.engine.aufwecken(); uw.teilZusammen(); };
+    for (const b of $('coLaenge').querySelectorAll('button')) b.onclick = () => e.set('uebeweg.abschnitt', b.dataset.wert);
+    for (const b of $('coZaehl').querySelectorAll('button')) b.onclick = () => this.einzaehlSetzen(b.dataset.wert);
     uw.on((art, x) => {
       if (art === 'start') { $('coach').classList.remove('versteckt'); $('btnUebeweg').classList.add('an'); }
       if (art === 'ende') { $('coach').classList.add('versteckt'); $('btnUebeweg').classList.remove('an'); if (this.offenesBlatt === 'pfad') this.blattZu(); }
-      if (art === 'stationFertig') { this.buehne.feiern(0.5); this.toast(`${x.titel} geschafft!`); }
-      if (art === 'etappeFertig') { this.buehne.feiern(1.4); this.toast(`${x.etappe.titel} geschafft – ${x.sterne} von 3 Sternen`, 2600); }
+      if (art === 'stationFertig') { this.buehne.feiern(x.etappeFertig ? 1.0 : 0.45); this.toast(x.etappeFertig ? `${x.etappe.typ === 'abschnitt' ? `${x.etappe.teil}, ${this.uw.taktText(x.etappe)}` : x.etappe.titel}: alles einmal durchgespielt` : `${x.station.titel}: einmal durchgespielt`, 2200); }
+      if (art === 'fertig') { this.buehne.feiern(1.6); this.toast('Der ganze Übeweg ist einmal durchgespielt!', 3200); }
       if (art === 'tagesziel') { this.buehne.feiern(1.0); this.toast(`Tagesziel erreicht: ${x} ${x === 1 ? 'Minute' : 'Minuten'} geübt. Stark!`, 3200); }
       if (art === 'pause') this.toast('Schon 25 Minuten am Stück – kurz aufstehen, Schultern lockern, etwas trinken.', 6000);
       this.coachRender();
       if (this.offenesBlatt === 'pfad') this.pfadRender();
     });
+  }
+
+  // Einzaehlen: aus | still (nur 4-3-2-1 sehen) | klick (hoerbar)
+  einzaehlArt() {
+    const e = this.einst;
+    if (!(Number(e.get('spiel.einzaehlen')) > 0)) return 'aus';
+    return e.get('spiel.einzaehlKlick') === false ? 'still' : 'klick';
+  }
+
+  einzaehlSetzen(art) {
+    const e = this.einst;
+    if (art === 'aus') e.set('spiel.einzaehlen', 0);
+    else {
+      if (!(Number(e.get('spiel.einzaehlen')) > 0)) e.set('spiel.einzaehlen', 1);
+      e.set('spiel.einzaehlKlick', art === 'klick');
+    }
+    this.toast(art === 'aus' ? 'Einzählen aus' : art === 'still' ? 'Einzählen still – nur die Zahlen' : 'Einzählen mit Klick', 1500);
   }
 
   // Zustaende in die Knoepfe uebertragen (nach jeder Einstellungsaenderung)
@@ -210,6 +269,7 @@ export class Oberflaeche {
     $('liedtext').classList.toggle('gross', !!e.get('liedtext.gross'));
     $('akkordHud').classList.toggle('versteckt', !e.get('ansicht.akkordHud'));
     this.zeileJetzt = undefined;
+    if (this.uw.aktiv) this.coachRender();
   }
 
   stilAuswahlSync() {
@@ -235,10 +295,10 @@ export class Oberflaeche {
     const tr = this.tr, s = this.song;
     // Play-Knopf
     const spielt = tr.spielt;
-    if (spielt !== this._spielt) { this._spielt = spielt; setzeSymbol($('btnPlay'), spielt ? 'pause' : 'play'); setzeSymbol($('coLos'), spielt ? 'pause' : 'play', spielt ? 'Pause' : 'Los'); }
+    if (spielt !== this._spielt) { this._spielt = spielt; setzeSymbol($('btnPlay'), spielt ? 'pause' : 'play'); setzeSymbol($('coLos'), spielt ? 'pause' : 'play'); $('coLos').classList.toggle('spielt', spielt); }
     // Kopf
     const ab = abschnittBei(s, t);
-    if (ab !== this._ab) { this._ab = ab; $('uiAbschnitt').textContent = ab ? ab.name : ''; $('uiAbschnitt').style.borderColor = ab ? ab.farbe : ''; }
+    if (ab !== this._ab) { this._ab = ab; $('uiAbschnitt').textContent = ab ? ab.name : ''; $('uiAbschnitt').style.setProperty('--farbe', ab ? ab.farbe : '#888'); }
     const b = beatAusZeit(s, t);
     const vorT = s.fassung?.anfang_b != null ? Math.round(-s.fassung.anfang_b / 4) : 0;
     const anzahl = s.taktAnzahl || s.takte.length;
@@ -255,6 +315,7 @@ export class Oberflaeche {
       this._tempoTxt = tempoTxt; $('uiTempo').textContent = tempoTxt;
       $('tempoWert').textContent = `${Math.round(tr.speed * 100)} %`;
       $('tempoRegler').value = String(Math.round(tr.speed * 100));
+      reglerFuellen($('tempoRegler'));
     }
     const zeitTxt = `${zeitFormat(t)} / ${zeitFormat(s.ende)}`;
     if (zeitTxt !== this._zeit) { this._zeit = zeitTxt; $('uiZeit').textContent = zeitTxt; }
@@ -274,7 +335,7 @@ export class Oberflaeche {
     this.zeitleisteZeichnen(t);
     if (this.uw.aktiv) {
       const fragt = this.uw.wartetAufUrteil;
-      if (fragt !== this._fragt) { this._fragt = fragt; $('coUrteil').classList.toggle('fragt', fragt); }
+      if (fragt !== this._fragt) { this._fragt = fragt; $('coJa').classList.toggle('fragt', fragt); }
     }
     const jetzt = performance.now();
     if (!this._ltZeit || jetzt - this._ltZeit > 300) { this._ltZeit = jetzt; this.liedtextPlatz(); }
@@ -288,7 +349,8 @@ export class Oberflaeche {
     const st = lt.style;
     if (!coachDa) { if (st.left || st.top) { st.left = st.width = st.top = st.transform = ''; } return; }
     const r = co.getBoundingClientRect();
-    if (window.innerHeight > window.innerWidth) {
+    const hudL = $('akkordHud').classList.contains('versteckt') ? window.innerWidth - 12 : $('akkordHud').getBoundingClientRect().left - 10;
+    if (window.innerHeight > window.innerWidth && hudL - (r.right + 10) < 320) {
       st.left = st.width = st.transform = '';
       st.top = `${Math.round(r.bottom + 10)}px`;
     } else {
@@ -352,7 +414,11 @@ export class Oberflaeche {
   einzaehlerUpdate() {
     const z = document.getElementById('einzaehler');
     const rest = this.tr.einzaehlRest();
-    if (rest >= 1 && rest <= 8) { if (z.textContent !== String(rest)) z.textContent = String(rest); z.classList.add('an'); return; }
+    if (rest >= 1 && rest <= 8) {
+      if (z.textContent !== String(rest)) { z.textContent = String(rest); z.classList.remove('schlag'); void z.offsetWidth; z.classList.add('schlag'); }
+      z.classList.add('an');
+      return;
+    }
     z.classList.remove('an');
   }
 
@@ -438,27 +504,34 @@ export class Oberflaeche {
     ctx.clearRect(0, 0, W, H);
     const A0 = this.song.anfang, L = this.song.ende;
     const x = (s) => ((s - A0) / (L - A0)) * W;
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.font = '600 12px -apple-system, system-ui, sans-serif';
+    const rund = (x0, y0, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x0, y0, w, h, r); else ctx.rect(x0, y0, w, h); };
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
+    rund(0, 0, W, H, 10); ctx.fill();
+    ctx.font = '650 12.5px ui-rounded, -apple-system, system-ui, sans-serif';
     ctx.textBaseline = 'middle';
+    const px = x(Math.max(A0, t));
     for (const ab of this.song.abschnitte) {
       const x0 = x(ab.t), x1 = x(Math.min(ab.te, L));
-      ctx.fillStyle = ab.farbe + '44'; ctx.fillRect(x0 + 1, 3, x1 - x0 - 2, H - 6);
-      ctx.fillStyle = ab.farbe; ctx.fillRect(x0 + 1, H - 4, x1 - x0 - 2, 2);
+      const w = Math.max(1, x1 - x0 - 3);
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, ab.farbe + '66'); g.addColorStop(1, ab.farbe + '30');
+      ctx.fillStyle = g; rund(x0 + 1.5, 3, w, H - 6, 7); ctx.fill();
+      // gespielter Teil etwas heller
+      if (px > x0) { ctx.fillStyle = ab.farbe + '40'; rund(x0 + 1.5, 3, Math.min(w, px - x0 - 1.5), H - 6, 7); ctx.fill(); }
+      ctx.fillStyle = ab.farbe; ctx.fillRect(x0 + 6, H - 6, Math.max(0, w - 9), 2);
       if (x1 - x0 > 40) {
         // Name auf die Breite des Liedteils kuerzen (sonst ueberlappen lange Namen im Hochformat)
         let name = ab.name;
-        const platz = x1 - x0 - 14;
+        const platz = x1 - x0 - 16;
         if (ctx.measureText(name).width > platz) { while (name.length > 2 && ctx.measureText(name + '…').width > platz) name = name.slice(0, -1); name = name.trimEnd() + '…'; }
-        ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(name, x0 + 8, H / 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillText(name, x0 + 9, H / 2 - 1);
       }
     }
     // Uebeweg-Etappe markieren
     if (this.uw.aktiv && this.uw.etappe) {
       const e = this.uw.etappe;
       const a = x(zeitAusBeat(this.song, e.vonB)), b = x(zeitAusBeat(this.song, e.bisB));
-      ctx.fillStyle = 'rgba(255,211,107,0.35)'; ctx.fillRect(a, 0, Math.max(3, b - a), 3);
+      ctx.fillStyle = 'rgba(255,211,107,0.9)'; rund(a, 0, Math.max(4, b - a), 3, 1.5); ctx.fill();
     }
     const lp = this.tr.loop;
     const zs = this.zl.zieh && this.zl.zieh.art === 'schleife' ? this.zl.zieh : null;   // Schleife wird gerade aufgezogen
@@ -466,44 +539,79 @@ export class Oberflaeche {
       let a = x(lp.a), b = x(lp.b);
       if (zs && Math.abs(zs.x1 - zs.x0) > 12) { a = Math.min(zs.x0, zs.x1); b = Math.max(zs.x0, zs.x1); }
       else if (!lp.aktiv) { a = b = -10; }
-      ctx.fillStyle = 'rgba(255,255,255,0.13)'; ctx.fillRect(a, 0, b - a, H);
-      ctx.fillStyle = '#e3262e'; ctx.fillRect(a - 1, 0, 3, H); ctx.fillRect(b - 2, 0, 3, H);
+      ctx.fillStyle = 'rgba(255,255,255,0.14)'; rund(a, 0, b - a, H, 8); ctx.fill();
+      ctx.fillStyle = '#ff4a50'; rund(a - 1, 0, 3, H, 1.5); ctx.fill(); rund(b - 2, 0, 3, H, 1.5); ctx.fill();
     }
-    const px = x(Math.max(A0, t));
+    // Abspielkopf: Linie mit Leuchten und Knopf
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,255,255,0.8)'; ctx.shadowBlur = 8;
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(px - 1.5, 0, 3, H);
+    rund(px - 1.5, 1, 3, H - 2, 1.5); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   // ================================================================== Coach (Uebeweg)
   coachRender() {
     const $ = (id) => document.getElementById(id);
-    const uw = this.uw;
+    const uw = this.uw, e0 = this.einst;
     if (!uw.aktiv) return;
     const e = uw.etappe, st = uw.station;
     if (!e) return;
     const z = uw.zustand(e);
-    $('coEtappe').textContent = e.typ === 'abschnitt' && e.nr > 0 ? `${e.titel} · ${uw.taktText(e)}` : e.titel;
+    const co = $('coach');
+    co.classList.toggle('mini', !!e0.get('uebeweg.mini'));
+    co.style.setProperty('--teil', e.farbe || '#ffd36b');
+    setzeSymbol($('coMini'), e0.get('uebeweg.mini') ? 'ausklappen' : 'einklappen');
+    $('coMini').setAttribute('aria-label', e0.get('uebeweg.mini') ? 'Übe-Karte ausklappen' : 'Übe-Karte einklappen');
+    $('coTeil').textContent = e.typ === 'ganz' ? 'Finale' : e.teil;
+    $('coEtappe').textContent = e.typ === 'abschnitt' ? `${uw.taktText(e).replace(/^Vorspiel, /, '')}${st ? ` · ${st.kurz}` : ''}`
+      : e.typ === 'durchlauf' ? `Alle zusammen${st ? ` · ${st.kurz}` : ''}` : e.typ === 'verbinden' ? `${e.nr - 1} + ${e.nr} verbinden` : `${e.titel}${st ? ` · ${st.kurz}` : ''}`;
+    // Abschnitte des Liedteils als Punkte (antippen = dorthin)
+    const punkte = $('coPunkte');
+    punkte.innerHTML = '';
+    for (const { e: x, i } of uw.teilListe(e)) {
+      const zx = uw.zustand(x);
+      const teilweise = !zx.fertig && Object.values(zx.stationen).some((v) => v.fertig);
+      const b = el('button', `co-punkt${x.typ === 'durchlauf' ? ' alle' : ''}${zx.fertig ? ' fertig' : teilweise ? ' teil' : ''}${i === uw.daten.aktuell ? ' jetzt' : ''}`);
+      b.setAttribute('aria-label', x.typ === 'durchlauf' ? 'Alle zusammen' : `${x.titel}, ${uw.taktText(x)}`);
+      if (x.typ === 'durchlauf') b.innerHTML = symbol('zusammen');
+      else b.textContent = String(x.nr);
+      b.onclick = () => { this.engine.aufwecken(); uw.springen(i); };
+      punkte.appendChild(b);
+    }
+    // Stationen: Hand frei waehlbar, Haken = einmal durchgespielt
     const box = $('coStationen');
     box.innerHTML = '';
     for (const s of e.stationen) {
-      const b = el('button', `st${z.stationen[s.id].fertig ? ' fertig' : ''}${s === st ? ' jetzt' : ''}`);
-      b.textContent = s.titel;
-      b.onclick = () => uw.stationWaehlen(s.id);
+      const fertig = z.stationen[s.id].fertig;
+      const b = el('button', `co-st${fertig ? ' fertig' : ''}${s === st ? ' jetzt' : ''}${s.pflicht ? '' : ' frei'}`);
+      b.innerHTML = `<span>${esc(s.kurz)}</span>${fertig ? symbol('haken') : ''}`;
+      b.onclick = () => { this.engine.aufwecken(); uw.stationWaehlen(s.id); };
       box.appendChild(b);
     }
     $('coNachricht').textContent = uw.nachricht;
-    const noetig = st ? st.noetig : 3;
     const zs = st ? z.stationen[st.id] : null;
-    $('coDurchgaenge').innerHTML = Array.from({ length: noetig }, (_, i) => `<i class="${i < uw.sauberFolge ? 'voll' : ''}"></i>`).join('') +
-      `<span>sauber in Folge · Tempo ${Math.round(((zs && zs.tempo) || (st && st.tempo) || 1) * 100)} %</span>`;
-    const p = uw.fortschritt(), h = uw.heute(), faellig = uw.faellige().length;
-    const ziel = this.einst.get('uebeweg.tagesZiel') || 0, min = Math.floor(h.sekunden / 60), serie = uw.serie();
-    const zielHtml = ziel ? `<i class="tagesziel${min >= ziel ? ' voll' : ''}"><i style="width:${Math.min(100, (h.sekunden / 60 / ziel) * 100).toFixed(1)}%"></i></i>${min} / ${ziel} min` : `heute ${min} min`;
-    $('coFuss').innerHTML = `<span>${p.fertig} von ${p.gesamt} Etappen${faellig ? ` · <b class="faellig">${faellig} zum Wiederholen</b>` : ''}</span><span>${zielHtml} · ${serie} ${serie === 1 ? 'Tag' : 'Tage'} in Folge</span>`;
+    $('coTempo').textContent = `${Math.round(((zs && zs.tempo) || (st && st.tempo) || 1) * 100)} %`;
+    for (const b of $('coLaenge').querySelectorAll('button')) b.classList.toggle('an', b.dataset.wert === uw.laengeId());
+    const za = this.einzaehlArt();
+    for (const b of $('coZaehl').querySelectorAll('button')) b.classList.toggle('an', b.dataset.wert === za);
+    const schleife = !!e0.get('uebeweg.schleife');
+    $('coSchleife').classList.toggle('an', schleife);
+    $('coSchleife').querySelector('span').textContent = schleife ? (uw.runde ? `Schleife · Runde ${uw.runde + 1}` : 'Schleife an') : 'Schleife aus';
+    $('coJa').classList.toggle('fragt', uw.wartetAufUrteil);
+    // Alle zusammen (bzw. zurueck zu den Abschnitten)
+    const zi = uw.zusammenIndex(e);
+    $('coZusammen').classList.toggle('versteckt', zi < 0);
+    setzeSymbol($('coZusammen'), e.typ === 'durchlauf' ? 'rueck' : 'zusammen', e.typ === 'durchlauf' ? 'Zu den Abschnitten' : 'Alle zusammen');
+    $('coAnhoeren').classList.toggle('an', uw.anhoeren);
     const tz = uw.ersteZeile(e);
     $('coTextUeben').classList.toggle('versteckt', !tz);
     $('coTextUeben').onclick = () => this.aktionen.textOeffnen(tz ? tz.nr : null);
-    $('coUrteil').classList.toggle('fragt', uw.wartetAufUrteil);
+    const p = uw.fortschritt(), h = uw.heute(), faellig = uw.faellige().length;
+    const ziel = e0.get('uebeweg.tagesZiel') || 0, min = Math.floor(h.sekunden / 60), serie = uw.serie();
+    const zielHtml = ziel ? `<i class="tagesziel${min >= ziel ? ' voll' : ''}"><i style="width:${Math.min(100, (h.sekunden / 60 / ziel) * 100).toFixed(1)}%"></i></i>${min} / ${ziel} min` : `heute ${min} min`;
+    $('coFuss').innerHTML = `<span>${p.fertig} von ${p.gesamt} Schritten${faellig ? ` · <b class="faellig">${faellig} wiederholen</b>` : ''}</span><span>${zielHtml}${serie ? ` · ${serie} ${serie === 1 ? 'Tag' : 'Tage'} in Folge` : ''}</span>`;
   }
 
   pfadRender() {
@@ -511,26 +619,34 @@ export class Oberflaeche {
     if (!uw.aktiv) { uw.laden(); uw.planBauen(); }        // immer der Plan der aktuellen Fassung
     if (!uw.etappen.length) { box.innerHTML = '<p class="text-hilfe">Starte den Übeweg, dann erscheint hier dein Lernpfad.</p>'; return; }
     const p = uw.fortschritt();
-    box.innerHTML = `<div class="text-hilfe">${p.fertig} von ${p.gesamt} Etappen geschafft</div><div class="pfadleiste"><i style="width:${(p.anteil * 100).toFixed(1)}%"></i></div>`;
-    let teil = null;
+    box.innerHTML = `<div class="pfad-kopf"><div><b>${p.fertig}</b><span> von ${p.gesamt} Schritten einmal durchgespielt</span></div><div class="pfadleiste"><i style="width:${(p.anteil * 100).toFixed(1)}%"></i></div>
+      <p class="text-hilfe">Haken heißt: einmal durchgespielt – nicht, dass es perfekt sitzen muss. Antippen springt dorthin.</p></div>`;
+    let teil = null, gruppe = null;
     uw.etappen.forEach((e, i) => {
       if (e.teil !== teil) {
         teil = e.teil;
-        const k = el('div', 'pfadteil', `<i style="background:${e.farbe}"></i>`);
-        k.appendChild(document.createTextNode(teil));
-        box.appendChild(k);
+        gruppe = el('section', 'pfad-gruppe');
+        gruppe.style.setProperty('--teil', e.farbe);
+        const alle = uw.etappen.filter((x) => x.teil === teil);
+        const fertig = alle.filter((x) => uw.zustand(x).fertig).length;
+        gruppe.innerHTML = `<header><i></i><b></b><span>${fertig}/${alle.length}</span></header>`;
+        gruppe.querySelector('b').textContent = teil;
+        box.appendChild(gruppe);
       }
       const z = uw.zustand(e);
-      const zeile = el('div', `etp${z.fertig ? ' fertig' : ''}${i === uw.daten.aktuell ? ' jetzt' : ''}`);
-      const kreis = e.typ === 'abschnitt' ? (e.nr === 0 ? 'V' : String(e.nr)) : e.typ === 'verbinden' ? '+' : e.typ === 'durchlauf' ? 'L' : 'G';
+      const zeile = el('button', `etp ${e.typ}${z.fertig ? ' fertig' : ''}${i === uw.daten.aktuell ? ' jetzt' : ''}`);
+      const kreis = e.typ === 'abschnitt' ? String(e.nr) : e.typ === 'verbinden' ? symbol('plus') : e.typ === 'durchlauf' ? symbol('zusammen') : symbol('stern');
       const ersteZ = uw.ersteZeile(e);
-      const unter = e.typ === 'abschnitt' ? `${uw.taktText(e)}${ersteZ ? ' · ' + ersteZ.text.split(/\s+/).slice(0, 3).join(' ') + ' …' : ''}` : e.typ === 'verbinden' ? 'Abschnitte zusammen' : e.typ === 'durchlauf' ? 'Liedteil am Stück' : 'Finale';
-      zeile.innerHTML = `<span class="kreis">${z.fertig ? symbol('haken') : kreis}</span><span class="tx"><b></b><span></span></span><span class="sterne">${[0, 1, 2].map((k) => `<span class="${k < z.sterne ? 'voll' : ''}">${symbol('stern')}</span>`).join('')}</span>`;
-      zeile.querySelector('b').textContent = e.typ === 'abschnitt' ? (e.nr === 0 ? 'Vorspiel' : `Abschnitt ${e.nr}`) : e.titel;
+      const titel = e.typ === 'abschnitt' ? uw.taktText(e) : e.typ === 'durchlauf' ? 'Alle zusammen' : e.typ === 'verbinden' ? `${e.nr - 1} + ${e.nr} verbinden` : e.titel;
+      const laufZ = !ersteZ && e.typ === 'abschnitt' ? uw.laufendeZeile(e) : null;
+      const unter = e.typ === 'abschnitt' ? (ersteZ ? ersteZ.text.split(/\s+/).slice(0, 4).join(' ') + ' …' : laufZ ? '… ' + laufZ.text.split(/\s+/).slice(-3).join(' ') : 'ohne Gesang') : e.typ === 'verbinden' ? 'Übergang üben' : e.typ === 'durchlauf' ? 'der ganze Liedteil am Stück' : 'von vorn bis hinten';
+      const pips = e.stationen.map((s) => `<i class="${z.stationen[s.id].fertig ? 'voll' : ''}${s.pflicht ? '' : ' frei'}" title="${esc(s.titel)}">${esc(s.kurz[0])}</i>`).join('');
+      zeile.innerHTML = `<span class="kreis">${z.fertig ? symbol('haken') : kreis}</span><span class="tx"><b></b><span></span></span><span class="pips">${pips}</span>`;
+      zeile.querySelector('b').textContent = titel;
       if (uw.istFaellig(e)) zeile.querySelector('b').insertAdjacentHTML('beforeend', '<span class="faellig-tag">wiederholen</span>');
       zeile.querySelector('.tx span').textContent = unter;
       zeile.onclick = () => { if (!uw.aktiv) this.aktionen.uebewegUmschalten(); uw.springen(i); this.blattZu(); };
-      box.appendChild(zeile);
+      gruppe.appendChild(zeile);
     });
     const jetzt = box.querySelector('.etp.jetzt');
     if (jetzt) jetzt.scrollIntoView({ block: 'center' });
@@ -578,7 +694,8 @@ export class Oberflaeche {
       T('Was spielst du?');
       F({ p: 'spiel.hand', l: 'Du spielst', t: 'auswahl', o: [['nichts', 'nichts – nur hören'], ['L', 'linke Hand'], ['R', 'rechte Hand'], ['beide', 'beide Hände']], h: 'Deine Hand ist stumm und leuchtet, die App spielt den Rest' });
       F({ p: 'ebenenVorlage', l: 'Schwierigkeit', t: 'auswahl', o: [['voll', 'Volle Fassung'], ['mittel', 'Mittel (ohne Harmonie)'], ['leicht', 'Leicht (Melodie + Bass)'], ['melodie', 'Nur Melodie']] });
-      F({ p: 'spiel.einzaehlen', l: 'Einzählen beim Start', t: 'auswahl', o: [[0, 'nein'], [1, '1 Takt'], [2, '2 Takte']] });
+      F({ p: 'spiel.einzaehlen', l: 'Einzählen beim Start', t: 'segment', o: [[0, 'Aus'], [1, '1 Takt'], [2, '2 Takte']] });
+      F({ p: 'spiel.einzaehlKlick', l: 'Einzählen hörbar (Klick)', t: 'schalter', h: 'Aus: die Zahlen 4-3-2-1 erscheinen, aber es klickt nicht' });
       F({ p: 'spiel.metronom', l: 'Metronom', t: 'schalter' });
       F({ p: 'klang.transposition', l: 'Tonart', t: 'regler', min: -6, max: 6, step: 1, f: (v) => `${tonartNach(v).name}${v ? ` (${v > 0 ? '+' : ''}${v})` : ''}`, h: 'In deine Stimmlage (die Aufnahme schweigt dann)' });
       T('Liedtext');
@@ -618,27 +735,33 @@ export class Oberflaeche {
       F({ p: 'klang.hall', l: 'Raumhall', t: 'regler', min: 0, max: 1, step: 0.05, f: (v) => `${Math.round(v * 100)} %` });
       F({ p: 'klang.gesangsfuehrung', l: 'Gesangsführung', t: 'regler', min: 0, max: 1, step: 0.05, f: (v) => (v ? `${Math.round(v * 100)} %` : 'aus'), h: 'Spielt die Gesangsmelodie leise mit (zum Singenlernen)' });
     } else if (r === 'uebeweg') {
-      F({ p: 'uebeweg.laenge', l: 'Länge eines Abschnitts', t: 'auswahl', o: [[1, '1 Takt (kleine Häppchen)'], [2, '2 Takte (empfohlen)'], [4, '4 Takte']] });
+      T('Abschnitte');
+      F({ p: 'uebeweg.abschnitt', l: 'Länge', t: 'segment', o: [['kurz', 'Kurz'], ['mittel', 'Mittel'], ['lang', 'Länger']], h: 'Kurz = 1 Takt, Mittel = 2 Takte, Länger = 4 Takte. Auch direkt in der Übe-Karte.' });
+      F({ p: 'uebeweg.reihenfolge', l: 'Reihenfolge', t: 'auswahl', o: [['abschnitt', 'Abschnitt für Abschnitt'], ['hand', 'Hand für Hand']], h: 'Hand für Hand: erst alle Abschnitte eines Liedteils links, dann alle zusammen links, dann rechts …' });
+      T('Wiederholen');
+      F({ p: 'uebeweg.schleife', l: 'Schleife', t: 'schalter', h: 'An: der Abschnitt läuft immer wieder, bis du „Geschafft“ oder „Weiter“ tippst. Aus: nach jedem Durchgang anhalten.' });
+      F({ p: 'uebeweg.treppe', l: 'Tempo-Treppe in der Schleife', t: 'schalter', h: 'Jede Runde 5 % schneller – bis zum Zieltempo' });
+      F({ p: 'uebeweg.pauseEinzaehlen', l: 'Einzählen vor jeder Runde', t: 'schalter', h: 'Kurze Atempause mit 4-3-2-1 (Klick je nach Einstellung „Einzählen hörbar“)' });
+      T('Tempo und Ziel');
       F({ p: 'uebeweg.startTempo', l: 'Starttempo', t: 'regler', min: 30, max: 100, step: 5, f: (v) => `${v} %` });
       F({ p: 'uebeweg.zielTempo', l: 'Zieltempo', t: 'regler', min: 50, max: 120, step: 5, f: (v) => `${v} %` });
-      F({ p: 'uebeweg.nachfragen', l: 'Nach jedem Durchgang fragen', t: 'schalter', h: 'Aus: jeder Durchgang zählt, außer du tippst „Nochmal“' });
-      F({ p: 'uebeweg.pauseEinzaehlen', l: 'Einzählen vor jeder Wiederholung', t: 'schalter' });
       F({ p: 'uebeweg.tagesZiel', l: 'Tagesziel', t: 'regler', min: 0, max: 60, step: 5, f: (v) => (v ? `${v} min` : 'aus') });
-      const b = el('button', 'knopf', 'Übeweg-Fortschritt dieser Fassung zurücksetzen');
+      const b = el('button', 'knopf', 'Haken dieser Fassung zurücksetzen');
       b.style.marginTop = '18px';
-      b.onclick = () => { if (confirm('Fortschritt des Übewegs für diese Fassung wirklich löschen?')) { if (!this.uw.aktiv) this.aktionen.uebewegUmschalten(); this.uw.zuruecksetzenAlles(); this.toast('Übeweg zurückgesetzt'); } };
+      b.onclick = () => { if (confirm('Alle Haken des Übewegs für diese Fassung entfernen?')) { if (!this.uw.aktiv) this.aktionen.uebewegUmschalten(); this.uw.zuruecksetzenAlles(); this.toast('Übeweg zurückgesetzt'); } };
       box.appendChild(b);
     } else {
       T('Auf dem iPad');
       F({ p: 'geraet.wachHalten', l: 'Bildschirm beim Üben wach halten', t: 'schalter' });
       F({ p: 'geraet.start', l: 'Beim Öffnen zeigen', t: 'auswahl', o: [['auto', 'Automatisch (iPad: Startseite)'], ['start', 'Startseite'], ['klavier', 'Klavier'], ['liedblatt', 'Liedblatt'], ['text', 'Text lernen']] });
-      F({ p: 'geraet.pedal', l: 'Bluetooth-Pedal / Tastatur', t: 'auswahl', o: [['geklappt', 'rechts = Geklappt, links = Nochmal'], ['takt', 'rechts/links = Takt vor/zurück']], h: 'Seitenwender-Pedale senden Pfeiltasten; Leertaste = Start/Stopp, Enter = Geklappt' });
+      F({ p: 'geraet.pedal', l: 'Bluetooth-Pedal / Tastatur', t: 'auswahl', o: [['geklappt', 'rechts = Geschafft, links = Nochmal'], ['takt', 'rechts/links = Takt vor/zurück']], h: 'Seitenwender-Pedale senden Pfeiltasten; Leertaste = Start/Stopp, Enter = Geschafft' });
       box.insertAdjacentHTML('beforeend', `
         <div class="abschnittstitel">Bedienung</div>
         <p class="text-hilfe"><b>Noten antippen</b>: Start/Stopp. <b>Noten ziehen</b>: vor- und zurückspulen. <b>Tasten unten</b> sind spielbar.<br>
         <b>Zeitleiste</b>: antippen = springen, waagerecht ziehen = spulen, lange drücken und ziehen = Schleife, doppelt tippen = Liedteil als Schleife.<br>
         <b>Noten</b>: doppelt links/rechts tippen = 10 Sekunden zurück/vor, zwei Finger = zoomen, lange drücken = 2-Takt-Schleife.<br>
-        <b>Übeweg</b>: kurze Abschnitte, erst links, dann rechts, dann beide; dreimal „Geklappt“, dann geht es weiter.</p>
+        <b>Übeweg</b>: kurze Abschnitte, erst links, dann rechts, dann beide. „Geschafft“ heißt: einmal durchgespielt. Hand, Länge, Schleife und Einzählen sind jederzeit in der Übe-Karte umstellbar; „Alle zusammen“ spielt den ganzen Liedteil am Stück, „Anhören“ spielt den Abschnitt einmal vor. Der Pfeil oben klappt die Karte klein.<br>
+        <b>Tastatur</b>: Leertaste = Start/Stopp, Enter = Geschafft, N = Nochmal, H = Anhören, S = Schleife, Z = Alle zusammen, U = Übeweg.</p>
         <div class="abschnittstitel">Offline</div>
         <p class="text-hilfe" id="infoOffline">Wird geprüft …</p>
         <div class="abschnittstitel">Über</div>
@@ -747,11 +870,23 @@ export class Oberflaeche {
       s.value = String(wert);
       s.onchange = () => { const roh = s.value, zahl = Number(roh); setze(f.o.some(([v]) => typeof v === 'number') && !isNaN(zahl) ? zahl : roh); s.blur(); };
       zeile.appendChild(s);
+    } else if (f.t === 'segment') {
+      zeile.classList.add('feld-segment');
+      const s = el('div', 'segmente');
+      s.setAttribute('aria-label', f.l);
+      for (const [v, n] of f.o) {
+        const b = el('button', String(v) === String(wert) ? 'an' : '');
+        b.textContent = n;
+        b.onclick = () => { setze(v); for (const x of s.children) x.classList.toggle('an', x === b); };
+        s.appendChild(b);
+      }
+      zeile.appendChild(s);
     } else if (f.t === 'regler') {
       const box = el('div'); box.style.cssText = 'display:flex;align-items:center;gap:10px';
       const r = el('input'); r.type = 'range'; r.min = f.min; r.max = f.max; r.step = f.step; r.value = wert; r.setAttribute('aria-label', f.l);
+      reglerFuellen(r);
       const w = el('span', 'wert'); w.textContent = f.f ? f.f(Number(wert)) : wert;
-      r.oninput = () => { w.textContent = f.f ? f.f(Number(r.value)) : r.value; setze(Number(r.value)); };
+      r.oninput = () => { reglerFuellen(r); w.textContent = f.f ? f.f(Number(r.value)) : r.value; setze(Number(r.value)); };
       box.appendChild(r); box.appendChild(w);
       zeile.appendChild(box);
     }

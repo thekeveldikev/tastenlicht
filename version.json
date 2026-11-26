@@ -1,22 +1,19 @@
 {
- "stand": "20261126-203757",
+ "stand": "20261126-211753",
  "neu": [
-  "Aufnahme und Klavier laufen jetzt genau zusammen: bei 100 % stichgenau auf einer gemeinsamen Uhr, bei anderem Tempo wartet das Klavier auf die Aufnahme. Feinabgleich unter Einstellungen › Klang.",
-  "Einzählen mitten im Lied: die Stelle bleibt stehen, es zählt 4-3-2-1, dann läuft alles gleichzeitig los. Auch im Liedblatt groß zu sehen.",
-  "Weiterspielen mitten im Ton: Töne, die an der Stelle noch klingen, werden mit angeschlagen.",
-  "Zeitleiste: Ziehen spult jetzt (statt eine Schleife zu setzen). Schleife: lange drücken, dann ziehen.",
-  "Zum Anfang spielt wieder sofort. Im Liedblatt mit Aufnahme klingt das Klavier-Vorspiel.",
-  "Stil oder Fassung beim Spielen wechseln: die Aufnahme läuft ohne Ruckeln durch.",
-  "Startseite: dein Tag auf einen Blick (Übezeit, Serie, Woche), große Kacheln für alles und ein Tipp des Tages.",
-  "Liedblatt: der ganze Text mit den Akkorden über der Silbe, auf der sie wechseln – läuft mit Klavier oder Aufnahme mit.",
-  "Liedblatt anpassen: Tonart, einfache oder volle Akkorde, Schrift, helles Notenpult-Blatt, Lautschrift, Griffe – und eigene Akkorde und Notizen.",
-  "Bühne: nur Text und Akkorde, groß, scrollt von selbst. Bluetooth-Pedal blättert.",
-  "Akkorde auswendig: alle Akkorde verdeckt – beim Mitspielen tauchen sie erst beim Wechsel auf.",
-  "Fünf Begleit-Stile in je drei Stufen (wie im Original, intim am Klavier, Neo-Klassik, Pop- und Soul-Ballade), Stil-Karussell und eigenes Arrangement.",
-  "Alle Klavierfassungen klingen lebendiger: Phrasenbögen, Crescendo vor den Refrains, singende Oberstimme.",
-  "Gesten: doppelt links/rechts tippen springt 10 Sekunden, zwei Finger zoomen die Noten, lange drücken setzt eine 2-Takt-Schleife.",
-  "Weiter, wo du warst: die App merkt sich die Stelle im Lied.",
-  "Auf dem iPhone: Text lernen, Unterwegs-Spur für Kopfhörer, Wörter ordnen, Wort-Quiz, Ich & Original.",
-  "Aktualisieren direkt in der App – und eine Sicherung deiner Lernstände als Datei."
+  "Übeweg neu: Abschnitte kurz (1 Takt), mittel (2 Takte) oder länger (4 Takte) – jederzeit direkt in der Übe-Karte umstellbar.",
+  "Schleife im Übeweg, jederzeit ein und aus: der Abschnitt läuft immer wieder, bis du „Geschafft“ oder „Weiter“ tippst. Auf Wunsch mit Tempo-Treppe.",
+  "„Geschafft“ heißt jetzt nur: einmal durchgespielt. Ein Merkzeichen, kein Urteil.",
+  "Alle zusammen: alle Abschnitte eines Liedteils am Stück – mit der Hand, die du gerade übst, auch in Schleife.",
+  "Reihenfolge wählbar: Abschnitt für Abschnitt oder Hand für Hand (erst alles links, dann alle zusammen links, dann rechts).",
+  "Hand jederzeit frei wählbar, Anhören (die App spielt den Abschnitt einmal vor), Tempo direkt in der Karte, Karte zum Einklappen.",
+  "Einzählen: aus, still (nur 4-3-2-1 sehen) oder mit Klick – im Übeweg und unter Einstellungen › Üben.",
+  "Neues Aussehen: Glas mit Lichtkante, runde Titelschrift, neue Leiste unten, neue Übe-Karte, Lernpfad mit Handzeichen je Abschnitt, Einstellungen als Karten.",
+  "Farbthemen färben jetzt auch Hintergrund und Trefferlinie. Neu: Thema „Bühnenlicht“ (Einstellungen › Ansicht › Farben).",
+  "Startseite zeigt, wo es im Übeweg weitergeht.",
+  "Tastatur: N = Nochmal, H = Anhören, S = Schleife, Z = Alle zusammen.",
+  "Aufnahme und Klavier laufen genau zusammen: bei 100 % stichgenau, bei anderem Tempo wartet das Klavier auf die Aufnahme.",
+  "Zeitleiste: Ziehen spult, lange drücken und ziehen setzt eine Schleife. Weiterspielen mitten im Ton schlägt klingende Töne mit an.",
+  "Liedblatt, Bühne, Akkorde auswendig, fünf Begleit-Stile, Text lernen auf dem iPhone – und Aktualisieren direkt in der App."
  ]
 }

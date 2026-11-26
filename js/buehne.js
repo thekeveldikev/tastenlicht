@@ -11,6 +11,8 @@ export const THEMEN = {
   gold: { name: 'Gold & Elfenbein', rh: ['#eebd55', '#fff2c8'], lh: ['#c4803f', '#f2c894'], bg: ['#0c0a07', '#1b160f'], linie: '#c9a227', nutzer: '#ffffff' },
   rose: { name: 'Rosé & Nachtblau', rh: ['#ff7fa9', '#ffd3e2'], lh: ['#4f86ff', '#aec8ff'], bg: ['#090912', '#15152b'], linie: '#ff4d8d', nutzer: '#fff3b0' },
   mono: { name: 'Graphit (ruhig)', rh: ['#e6e6e6', '#ffffff'], lh: ['#8590a2', '#c6ccd8'], bg: ['#09090a', '#151516'], linie: '#9aa3b2', nutzer: '#ffd27a' },
+  // Buehnenlicht (optional): Nachtblau mit weichen Scheinwerfern – nur ein ruhiger Hintergrund, keine Bewegung
+  buehnenlicht: { name: 'Bühnenlicht (Scheinwerfer)', rh: ['#9be445', '#e2ffa8'], lh: ['#3d8bff', '#a6d4ff'], bg: ['#060813', '#161b36'], linie: '#ff3b55', nutzer: '#ffd27a', licht: true },
 };
 
 const SCHRIFT = '-apple-system,"SF Pro Display","Helvetica Neue",system-ui,sans-serif';
@@ -119,6 +121,16 @@ export class Buehne {
     const vig = bgc.createRadialGradient(W / 2, this.hitY * 0.6, Math.min(W, H) * 0.2, W / 2, this.hitY * 0.6, Math.max(W, H) * 0.8);
     vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.45)');
     bgc.fillStyle = vig; bgc.fillRect(0, 0, W, this.hitY);
+    if (this.thema.licht) {
+      // drei weiche Scheinwerfer und ein heller Saum ueber der Tastatur
+      const spot = (x, y, r, farbe) => { const g = bgc.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, farbe); g.addColorStop(1, 'rgba(0,0,0,0)'); bgc.fillStyle = g; bgc.fillRect(0, 0, W, this.hitY); };
+      spot(W * 0.5, -this.hitY * 0.15, this.hitY * 0.95, 'rgba(255, 214, 150, 0.13)');
+      spot(W * 0.08, this.hitY * 0.35, W * 0.42, 'rgba(70, 120, 255, 0.12)');
+      spot(W * 0.94, this.hitY * 0.45, W * 0.4, 'rgba(170, 90, 255, 0.10)');
+      const saum = bgc.createLinearGradient(0, this.hitY - this.hitY * 0.35, 0, this.hitY);
+      saum.addColorStop(0, 'rgba(255,255,255,0)'); saum.addColorStop(1, 'rgba(160,190,255,0.07)');
+      bgc.fillStyle = saum; bgc.fillRect(0, this.hitY - this.hitY * 0.35, W, this.hitY * 0.35);
+    }
     this.bgCanvas = bg;
     // Weisse Tasten
     const th = this.tastH;
