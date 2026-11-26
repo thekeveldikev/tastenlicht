@@ -214,7 +214,8 @@ export class Sampler {
     const info = this.manifest?.notes[p]?.[stufe];
     if (!info) return;
     try {
-      const r = await fetch(basis + info.file);
+      let r = await fetch(basis + info.file);
+      if (!r.ok) { await new Promise((ok) => setTimeout(ok, 900)); r = await fetch(basis + info.file, { cache: 'reload' }); }   // ein Aussetzer: einmal nachladen
       if (!r.ok) throw new Error(r.status);
       const buf = await this.e.ctx.decodeAudioData(await r.arrayBuffer());
       // Anschlag selbst finden: MP3-Decoder setzen je nach Geraet unterschiedlich viel Stille davor
