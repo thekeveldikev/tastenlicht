@@ -24,7 +24,7 @@ const STANDARD = {
     notenVerstecken: 'aus', maxDpr: 2, leisteKlein: false,
   },
   effekte: { aufprall: true, bloom: 0.5, funken: false, pulse: false, sterne: false, aurora: false },
-  klang: { master: 0.9, klavier: 0.9, spur: 0.85, metronom: 0.7, hall: 0.3, spurQuelle: 'keine', gesangsfuehrung: 0, transposition: 0 },
+  klang: { master: 0.9, klavier: 0.9, spur: 0.85, metronom: 0.7, hall: 0.3, spurQuelle: 'keine', gesangsfuehrung: 0, transposition: 0, spurVersatz: 0 },
   spiel: { hand: 'nichts', einzaehlen: 1, metronom: false },
   schichten: { mel: true, harm: true, fill: true, bass: true, acc: true },
   ebenenVorlage: 'voll',
@@ -160,8 +160,9 @@ async function aufbauen(app, lade) {
   const klangAnwenden = () => {
     const k = einst.werte.klang;
     engine.setPegel('master', k.master);
-    const blattStill = liedblatt?.sichtbar && (einst.get('blatt.klang') === 'stumm' || (einst.get('blatt.klang') === 'original' && !song.transposition));
-    engine.setPegel('klavier', blattStill ? 0 : k.klavier);
+    engine.setPegel('klavier', k.klavier);
+    const versatz = (Number(k.spurVersatz) || 0) / 1000;      // Feinabgleich Aufnahme (ms -> s)
+    if (versatz !== tr.spurVersatz) tr.setSpurVersatz(versatz);
     engine.setPegel('klick', k.metronom);
     engine.setHall(k.hall);
     engine.sampler.verstimmungCent = song.stimmungCent || 0;
@@ -207,7 +208,8 @@ async function aufbauen(app, lade) {
     sicht.noten = song.alleNoten; sicht.takte = song.takte; sicht.akkorde = song.akkorde;
     if (!tr.loop.aktiv) tr.loop = { a: song.anfang, b: song.ende, aktiv: false };
     bereichAnwenden(); filterAnwenden();
-    tr.seek(Math.max(song.anfang, Math.min(pos, song.ende)), { weiter: tr.spielt });
+    if (pos < song.anfang || pos > song.ende) tr.seek(Math.max(song.anfang, Math.min(pos, song.ende)), { weiter: tr.spielt });
+    else tr.neuPlanen();                     // die Aufnahme laeuft weiter, nur das Klavier spielt die neue Fassung
     ui.zustandSync();
     const stil = (song.stile || []).find((x) => x.id === song.fassung.stil);
     ui.toast(`${song.fassung.name}${song.transposition ? ` · ${song.tonartName}` : ''}${stil ? ` – ${stil.kurz}` : ''}`, stil ? 2600 : 1900);
@@ -358,6 +360,7 @@ async function aufbauen(app, lade) {
     },
     liedblattSchliessen: () => {
       if (!liedblatt) return;
+      tr.stummAb = Infinity;
       liedblatt.verstecken();
       if (blattVorher && einst.get('klang.spurQuelle') !== blattVorher.spurQuelle) einst.set('klang.spurQuelle', blattVorher.spurQuelle);
       blattVorher = null;
@@ -371,8 +374,8 @@ async function aufbauen(app, lade) {
       const aufnahme = !song.transposition;
       const q = aufnahme && art === 'original' ? 'original' : aufnahme && art === 'gesang' ? 'gesang' : 'keine';
       if (einst.get('klang.spurQuelle') !== q) einst.set('klang.spurQuelle', q);
-      const still = art === 'stumm' || (art === 'original' && aufnahme);
-      engine.setPegel('klavier', still ? 0 : einst.get('klang.klavier'));
+      // Klavier nicht stummschalten, sondern nur die Noten ab 0:00 auslassen: das Vorspiel (vor der Aufnahme) bleibt hoerbar
+      tr.stummAb = art === 'stumm' ? -Infinity : art === 'original' && aufnahme ? 0 : Infinity;
       if (!aufnahme && (art === 'original' || art === 'gesang')) ui.toast('Die Aufnahme gibt es nur in Des-Dur – jetzt spielt das Klavier', 2600);
     },
     uebewegAktiv: () => uw.aktiv,

@@ -347,6 +347,7 @@ export class LiedblattAnsicht {
     <button class="knopf rund" data-a="buehne" aria-label="Bühne beenden"></button>
   </div>
   <div class="lb-hinweis versteckt"></div>
+  <div class="lb-zaehler"></div>
   <aside class="lb-einst glas" aria-modal="true"><div class="lb-einst-kopf"><h2>Darstellung</h2><button class="knopf rund" data-a="einstZu" aria-label="Schließen"></button></div><div class="lb-einst-inhalt"></div></aside>
   <div class="lb-pop glas versteckt" role="dialog"></div>
 </div>`;
@@ -355,7 +356,7 @@ export class LiedblattAnsicht {
       app: q('.lb-app'), titel: q('.lb-titel'), unter: q('.lb-unter'), ton: q('.lb-ton'), griffe: q('.lb-griffe'), blatt: q('.lb-blatt'),
       inhalt: q('.lb-inhalt'), druckkopf: q('.lb-druckkopf'), leiste: q('.lb-leiste'), jetzt: q('.lb-jetzt-ak'), dann: q('.lb-dann b'),
       dannBox: q('.lb-dann'), punkte: [...this.wurzel.querySelectorAll('.lb-punkte i')], teilname: q('.lb-teilname'), zeit: q('.lb-zeit'),
-      klang: q('.lb-klang'), tempo: q('.lb-tempo'), einst: q('.lb-einst'), einstInhalt: q('.lb-einst-inhalt'), pop: q('.lb-pop'), hinweis: q('.lb-hinweis'),
+      klang: q('.lb-klang'), tempo: q('.lb-tempo'), zaehler: q('.lb-zaehler'), einst: q('.lb-einst'), einstInhalt: q('.lb-einst-inhalt'), pop: q('.lb-pop'), hinweis: q('.lb-hinweis'),
     };
     const S = (sel, name, text) => { for (const b of this.wurzel.querySelectorAll(sel)) this.setzeSymbol(b, name, text); };
     S('[data-a="zurueck"]', 'zurueck');
@@ -928,6 +929,10 @@ export class LiedblattAnsicht {
     const zt = `${Math.max(0, Math.floor(t / 60))}:${String(Math.max(0, Math.floor(t % 60))).padStart(2, '0')}`;
     if (this.r.zeit.textContent !== zt) this.r.zeit.textContent = zt;
     if (this._spielteZuletzt !== this.tr.spielt) { this._spielteZuletzt = this.tr.spielt; this._leisteSync(); }
+    // Einzaehlen gross anzeigen
+    const zrest = this.tr.einzaehlRest ? this.tr.einzaehlRest() : 0;
+    const ztext = zrest > 0 ? String(zrest) : '';
+    if (this.r.zaehler.textContent !== ztext) { this.r.zaehler.textContent = ztext; this.r.zaehler.classList.toggle('an', !!ztext); }
   }
 
   _inSicht(el, sofort) {

@@ -88,6 +88,8 @@ export class AudioEngine {
     g.gain.exponentialRampToValueAtTime(0.0001, wann + 0.06);
     o.connect(f).connect(g).connect(this.klickBus);
     o.start(wann); o.stop(wann + 0.08);
+    // zum Abbrechen (Einzaehlen gestoppt): stumm schalten statt stop() (zweimal stop() wirft in alten Safaris)
+    return { stop: (t) => { try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(0.0001, t); } catch { /* egal */ } } };
   }
 
   // Kurzer, heller Ton fuer Rueckmeldungen (richtig/falsch) – leise, abschaltbar
@@ -108,7 +110,7 @@ export class AudioEngine {
   // dann aus dem Speicher – kein staendiges Nachladen und Entschluesseln). Lautstaerke ueber WebAudio,
   // weil iOS el.volume ignoriert; klappt das nicht, laeuft das Element direkt.
   medium(name, url) {
-    if (this.medien.has(name)) return this.medien.get(name);
+    if (this.medien.has(name)) { const m = this.medien.get(name); m.pufferLaden(); return m; }
     const el = new Audio();
     el.preload = 'auto';
     el.preservesPitch = true;
@@ -118,7 +120,27 @@ export class AudioEngine {
     const g = this.ctx.createGain();
     g.gain.value = 0;
     try { this.ctx.createMediaElementSource(el).connect(g).connect(this.spurBus); } catch (e) { console.warn('Spur ohne WebAudio', e); }
-    const m = { name, el, gain: g, bereit: new Promise((ok) => { el.addEventListener('canplaythrough', ok, { once: true }); el.addEventListener('error', ok, { once: true }); }) };
+    const m = { name, el, gain: g, puffer: null, bereit: new Promise((ok) => { el.addEventListener('canplaythrough', ok, { once: true }); el.addEventListener('error', ok, { once: true }); }) };
+    // Zusaetzlich als Puffer dekodieren (mono): bei 100 % Tempo laeuft die Aufnahme dann auf derselben Audio-Uhr
+    // wie das Klavier – stichgenau. Bis der Puffer fertig ist (etwa 1 s), springt das Audio-Element ein.
+    // Nur die gerade gewaehlte Aufnahme haelt ihren Puffer (Speicher auf dem iPad); beim Zurueckwechseln neu dekodieren.
+    m._gen = 0;
+    m.pufferLaden = () => {
+      if (m.puffer || m._lade) return;
+      const gen = ++m._gen;
+      m._lade = (async () => {
+        const roh = await (await fetch(url)).arrayBuffer();
+        const ab = await new Promise((ok, f) => { const r = this.ctx.decodeAudioData(roh, ok, f); if (r && r.then) r.then(ok, f); });
+        if (gen !== m._gen) return;
+        if (ab.numberOfChannels === 1) { m.puffer = ab; return; }
+        const mono = this.ctx.createBuffer(1, ab.length, ab.sampleRate);
+        const z = mono.getChannelData(0), k = ab.numberOfChannels;
+        for (let c = 0; c < k; c++) { const d = ab.getChannelData(c); for (let i = 0; i < d.length; i++) z[i] += d[i] / k; }
+        if (gen === m._gen) m.puffer = mono;
+      })().catch((e) => console.warn('Aufnahme nicht dekodierbar – nur Audio-Element', e)).finally(() => { if (gen === m._gen) m._lade = null; });
+    };
+    m.pufferFrei = () => { m._gen++; m._lade = null; m.puffer = null; };
+    m.pufferLaden();
     this.medien.set(name, m);
     return m;
   }

@@ -1,6 +1,12 @@
 {
- "stand": "20261126-200305",
+ "stand": "20261126-203351",
  "neu": [
+  "Aufnahme und Klavier laufen jetzt genau zusammen: bei 100 % stichgenau auf einer gemeinsamen Uhr, bei anderem Tempo wartet das Klavier auf die Aufnahme. Feinabgleich unter Einstellungen › Klang.",
+  "Einzählen mitten im Lied: die Stelle bleibt stehen, es zählt 4-3-2-1, dann läuft alles gleichzeitig los. Auch im Liedblatt groß zu sehen.",
+  "Weiterspielen mitten im Ton: Töne, die an der Stelle noch klingen, werden mit angeschlagen.",
+  "Zeitleiste: Ziehen spult jetzt (statt eine Schleife zu setzen). Schleife: lange drücken, dann ziehen.",
+  "Zum Anfang spielt wieder sofort. Im Liedblatt mit Aufnahme klingt das Klavier-Vorspiel.",
+  "Stil oder Fassung beim Spielen wechseln: die Aufnahme läuft ohne Ruckeln durch.",
   "Startseite: dein Tag auf einen Blick (Übezeit, Serie, Woche), große Kacheln für alles und ein Tipp des Tages.",
   "Liedblatt: der ganze Text mit den Akkorden über der Silbe, auf der sie wechseln – läuft mit Klavier oder Aufnahme mit.",
   "Liedblatt anpassen: Tonart, einfache oder volle Akkorde, Schrift, helles Notenpult-Blatt, Lautschrift, Griffe – und eigene Akkorde und Notizen.",

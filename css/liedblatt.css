@@ -243,3 +243,8 @@ html.handy .lb-titel { font-size: 19px; overflow: hidden; text-overflow: ellipsi
 html.handy .lb-kopf > .lb-frei { display: none; }
 html.handy .lb-tonart .knopf.rund { min-height: 36px; min-width: 36px; width: 36px; }
 html.handy .lb-ton { min-width: 46px; }
+
+/* Einzaehlen gross in der Mitte */
+.lb-zaehler { position: absolute; z-index: 7; left: 50%; top: 45%; transform: translate(-50%, -50%) scale(.8); pointer-events: none; opacity: 0;
+  font: 900 140px/1 var(--schrift-titel); color: var(--akzent); text-shadow: 0 6px 40px rgba(0, 0, 0, 0.6); transition: opacity .12s, transform .12s; }
+.lb-zaehler.an { opacity: 1; transform: translate(-50%, -50%) scale(1); }

@@ -242,7 +242,7 @@ export class Oberflaeche {
     const b = beatAusZeit(s, t);
     const vorT = s.fassung?.anfang_b != null ? Math.round(-s.fassung.anfang_b / 4) : 0;
     const anzahl = s.taktAnzahl || s.takte.length;
-    const zaehltEin = spielt && t < tr.startZeit - 0.02;
+    const zaehltEin = tr.einzaehlRest() > 0;
     const taktTxt = zaehltEin ? 'Einzählen'
       : b < 0 && vorT > 0 && b >= -vorT * 4 - 1e-3 ? `Vorspiel ${Math.floor(b / 4) + vorT + 1}/${vorT}`
       : `Takt ${Math.min(Math.max(1, Math.floor(b / 4) + 1), anzahl)}/${anzahl}`;
@@ -270,7 +270,7 @@ export class Oberflaeche {
       }
     }
     if (this.einst.get('liedtext.anzeigen')) this.liedtextUpdate(t);
-    this.einzaehlerUpdate(t);
+    this.einzaehlerUpdate();
     this.zeitleisteZeichnen(t);
     if (this.uw.aktiv) {
       const fragt = this.uw.wartetAufUrteil;
@@ -349,32 +349,61 @@ export class Oberflaeche {
     }
   }
 
-  einzaehlerUpdate(t) {
+  einzaehlerUpdate() {
     const z = document.getElementById('einzaehler');
-    const tr = this.tr;
-    if (tr.spielt && !tr.wartet && t < tr.startZeit - 0.02) {
-      const rest = Math.ceil(beatAusZeit(this.song, tr.startZeit) - beatAusZeit(this.song, t) - 1e-6);
-      if (rest >= 1 && rest <= 8) { if (z.textContent !== String(rest)) z.textContent = String(rest); z.classList.add('an'); return; }
-    }
+    const rest = this.tr.einzaehlRest();
+    if (rest >= 1 && rest <= 8) { if (z.textContent !== String(rest)) z.textContent = String(rest); z.classList.add('an'); return; }
     z.classList.remove('an');
   }
 
-  // ================================================================== Zeitleiste (Tippen = springen, Ziehen = Schleife)
+  // ================================================================== Zeitleiste
+  // Tippen = springen · waagerecht ziehen = spulen (laeuft danach weiter) · lange druecken, dann ziehen = Schleife
+  // · doppelt tippen = Liedteil als Schleife
   zeitleisteEinrichten() {
     const cv = document.getElementById('zeitleiste');
     this.zl = { cv, ctx: cv.getContext('2d'), zieh: null, letzterTipp: 0 };
-    const zuZeit = (x) => this.song.anfang + (x / cv.clientWidth) * (this.song.ende - this.song.anfang);
+    const zuZeit = (x) => this.song.anfang + (Math.max(0, Math.min(cv.clientWidth, x)) / cv.clientWidth) * (this.song.ende - this.song.anfang);
     const xVon = (ev) => ev.clientX - cv.getBoundingClientRect().left;
-    cv.addEventListener('pointerdown', (ev) => { try { cv.setPointerCapture(ev.pointerId); } catch { /* egal */ } const x = xVon(ev); this.zl.zieh = { x0: x, x1: x }; });
-    cv.addEventListener('pointermove', (ev) => { if (this.zl.zieh) this.zl.zieh.x1 = xVon(ev); });
-    cv.addEventListener('pointerup', () => {
+    cv.addEventListener('pointerdown', (ev) => {
+      try { cv.setPointerCapture(ev.pointerId); } catch { /* egal */ }
+      const x = xVon(ev);
+      const z = { x0: x, x1: x, art: 'tipp', lief: this.tr.spielt };
+      z.timer = setTimeout(() => {
+        if (this.zl.zieh !== z || z.art !== 'tipp') return;
+        z.art = 'schleife';                            // lange gedrueckt: jetzt zieht der Finger eine Schleife auf
+        try { navigator.vibrate?.(12); } catch { /* egal */ }
+        this.toast('Schleife: jetzt zur Seite ziehen', 1500);
+      }, 480);
+      this.zl.zieh = z;
+    });
+    cv.addEventListener('pointermove', (ev) => {
+      const z = this.zl.zieh;
+      if (!z) return;
+      z.x1 = xVon(ev);
+      if (z.art === 'tipp' && Math.abs(z.x1 - z.x0) > 8) {
+        clearTimeout(z.timer);
+        z.art = 'spulen';
+        if (this.tr.spielt) this.tr.pause();
+      }
+      if (z.art === 'spulen') this.aktionen.springen(zuZeit(z.x1));
+    });
+    const ende = (ev) => {
       const z = this.zl.zieh;
       this.zl.zieh = null;
       if (!z) return;
-      if (Math.abs(z.x1 - z.x0) > 12) {
-        const a = this.aufTakt(zuZeit(Math.min(z.x0, z.x1)), false), b = this.aufTakt(zuZeit(Math.max(z.x0, z.x1)), true);
-        this.aktionen.schleifeSetzen(a, b);
-        this.toast('Schleife gesetzt');
+      clearTimeout(z.timer);
+      if (ev.type === 'pointercancel') return;
+      if (z.art === 'spulen') { if (z.lief) this.tr.play(); return; }   // nach dem Spulen sofort weiter (ohne Einzaehlen)
+      if (z.art === 'schleife') {
+        if (Math.abs(z.x1 - z.x0) > 12) {
+          const a = this.aufTakt(zuZeit(Math.min(z.x0, z.x1)), false), b = this.aufTakt(zuZeit(Math.max(z.x0, z.x1)), true);
+          this.aktionen.schleifeSetzen(a, b);
+          this.toast('Schleife gesetzt');
+        } else {
+          const ab = abschnittBei(this.song, zuZeit(z.x0));
+          this.aktionen.schleifeSetzen(ab.t, ab.te);
+          this.toast(`Schleife: ${ab.name}`);
+        }
         return;
       }
       const jetzt = performance.now();
@@ -387,8 +416,9 @@ export class Oberflaeche {
       }
       this.zl.letzterTipp = jetzt;
       this.aktionen.springen(zuZeit(z.x0));
-    });
-    cv.addEventListener('pointercancel', () => { this.zl.zieh = null; });
+    };
+    cv.addEventListener('pointerup', ende);
+    cv.addEventListener('pointercancel', ende);
   }
 
   aufTakt(t, ende) {
@@ -431,9 +461,10 @@ export class Oberflaeche {
       ctx.fillStyle = 'rgba(255,211,107,0.35)'; ctx.fillRect(a, 0, Math.max(3, b - a), 3);
     }
     const lp = this.tr.loop;
-    if (lp.aktiv || this.zl.zieh) {
+    const zs = this.zl.zieh && this.zl.zieh.art === 'schleife' ? this.zl.zieh : null;   // Schleife wird gerade aufgezogen
+    if (lp.aktiv || zs) {
       let a = x(lp.a), b = x(lp.b);
-      if (this.zl.zieh && Math.abs(this.zl.zieh.x1 - this.zl.zieh.x0) > 12) { a = Math.min(this.zl.zieh.x0, this.zl.zieh.x1); b = Math.max(this.zl.zieh.x0, this.zl.zieh.x1); }
+      if (zs && Math.abs(zs.x1 - zs.x0) > 12) { a = Math.min(zs.x0, zs.x1); b = Math.max(zs.x0, zs.x1); }
       else if (!lp.aktiv) { a = b = -10; }
       ctx.fillStyle = 'rgba(255,255,255,0.13)'; ctx.fillRect(a, 0, b - a, H);
       ctx.fillStyle = '#e3262e'; ctx.fillRect(a - 1, 0, 3, H); ctx.fillRect(b - 2, 0, 3, H);
@@ -582,6 +613,7 @@ export class Oberflaeche {
       F({ p: 'klang.master', l: 'Gesamtlautstärke', t: 'regler', min: 0, max: 1.2, step: 0.05, f: (v) => `${Math.round(v * 100)} %` });
       F({ p: 'klang.klavier', l: 'Klavier', t: 'regler', min: 0, max: 1.2, step: 0.05, f: (v) => `${Math.round(v * 100)} %` });
       F({ p: 'klang.spur', l: 'Mitlaufende Aufnahme', t: 'regler', min: 0, max: 1.2, step: 0.05, f: (v) => `${Math.round(v * 100)} %` });
+      F({ p: 'klang.spurVersatz', l: 'Aufnahme und Klavier abgleichen', t: 'regler', min: -300, max: 300, step: 10, f: (v) => (!v ? 'genau' : v < 0 ? `Klavier ${-v} ms früher` : `Klavier ${v} ms später`), h: 'Nur falls es bei dir hörbar versetzt klingt: klingt das Klavier zu spät, nach links schieben; zu früh, nach rechts.' });
       F({ p: 'klang.metronom', l: 'Metronom', t: 'regler', min: 0, max: 1.2, step: 0.05, f: (v) => `${Math.round(v * 100)} %` });
       F({ p: 'klang.hall', l: 'Raumhall', t: 'regler', min: 0, max: 1, step: 0.05, f: (v) => `${Math.round(v * 100)} %` });
       F({ p: 'klang.gesangsfuehrung', l: 'Gesangsführung', t: 'regler', min: 0, max: 1, step: 0.05, f: (v) => (v ? `${Math.round(v * 100)} %` : 'aus'), h: 'Spielt die Gesangsmelodie leise mit (zum Singenlernen)' });
@@ -604,7 +636,8 @@ export class Oberflaeche {
       box.insertAdjacentHTML('beforeend', `
         <div class="abschnittstitel">Bedienung</div>
         <p class="text-hilfe"><b>Noten antippen</b>: Start/Stopp. <b>Noten ziehen</b>: vor- und zurückspulen. <b>Tasten unten</b> sind spielbar.<br>
-        <b>Zeitleiste</b>: antippen = springen, waagerecht ziehen = Schleife, doppelt tippen = Liedteil als Schleife.<br>
+        <b>Zeitleiste</b>: antippen = springen, waagerecht ziehen = spulen, lange drücken und ziehen = Schleife, doppelt tippen = Liedteil als Schleife.<br>
+        <b>Noten</b>: doppelt links/rechts tippen = 10 Sekunden zurück/vor, zwei Finger = zoomen, lange drücken = 2-Takt-Schleife.<br>
         <b>Übeweg</b>: kurze Abschnitte, erst links, dann rechts, dann beide; dreimal „Geklappt“, dann geht es weiter.</p>
         <div class="abschnittstitel">Offline</div>
         <p class="text-hilfe" id="infoOffline">Wird geprüft …</p>
