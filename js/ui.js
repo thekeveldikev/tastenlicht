@@ -5,6 +5,8 @@ import { symbol, setzeSymbol } from './symbole.js';
 import { zeitFormat, abschnittBei, akkordBei, zeileBei, beatAusZeit, zeitAusBeat } from './song.js';
 import { akkordName, akkordStufe, tonartNach } from './notennamen.js';
 import { zeilenSilben } from './silben.js';
+import { updateBaustein } from './update.js';
+import { sicherungBaustein } from './sicherung.js';
 
 export const EBENEN_VORLAGEN = {
   voll: { mel: true, harm: true, fill: true, bass: true, acc: true },
@@ -38,8 +40,9 @@ export class Oberflaeche {
           <span class="pille leise" id="uiTempo"></span>
         </div>
         <div class="rechts">
+          <button class="knopf rund" id="btnStart" aria-label="Startseite"></button>
           <button class="knopf rund" id="btnText" aria-label="Text lernen"></button>
-          <button class="knopf rund" id="btnBlatt" aria-label="Akkordblatt"></button>
+          <button class="knopf rund" id="btnBlatt" aria-label="Liedblatt: Akkorde über dem Text"></button>
           <button class="knopf rund" id="btnEinst" aria-label="Einstellungen"></button>
         </div>
       </header>
@@ -100,12 +103,9 @@ export class Oberflaeche {
         <nav class="reiter" id="blattReiter"></nav>
         <div class="blatt-inhalt" id="blattInhalt"></div>
       </aside>
-      <div id="akkordblatt" class="versteckt">
-        <div class="blatt-leiste"><b id="abTitel">Akkordblatt</b>
-          <button class="knopf" id="abDrucken"></button><button class="knopf" id="abZu"></button></div>
-        <div class="blatt-inhalt" id="abInhalt"></div>
-      </div>
       <div id="textWurzel" class="versteckt"></div>
+      <div id="blattWurzel" class="versteckt"></div>
+      <div id="startWurzel" class="versteckt"></div>
       <div id="toast" role="status" aria-live="polite"></div>`);
     this.symboleSetzen();
     this.bindungen();
@@ -116,7 +116,8 @@ export class Oberflaeche {
   symboleSetzen() {
     const $ = (id) => document.getElementById(id);
     setzeSymbol($('btnText'), 'lautschule');
-    setzeSymbol($('btnBlatt'), 'blatt');
+    setzeSymbol($('btnStart'), 'haus');
+    setzeSymbol($('btnBlatt'), 'liedblatt');
     setzeSymbol($('btnEinst'), 'zahnrad');
     setzeSymbol($('btnPlay'), 'play');
     setzeSymbol($('btnAnfang'), 'anfang');
@@ -133,8 +134,6 @@ export class Oberflaeche {
     setzeSymbol($('coNein'), 'wiederholen', 'Nochmal');
     setzeSymbol($('coTextUeben'), 'lautschule', 'Text üben');
     setzeSymbol($('blattZu'), 'kreuz');
-    setzeSymbol($('abDrucken'), 'teilen', 'Drucken / PDF');
-    setzeSymbol($('abZu'), 'kreuz', 'Schließen');
   }
 
   bindungen() {
@@ -151,12 +150,11 @@ export class Oberflaeche {
     $('btnLied').onclick = () => e.set('liedtext.anzeigen', !e.get('liedtext.anzeigen'));
     $('btnKlein').onclick = () => e.set('ansicht.leisteKlein', !e.get('ansicht.leisteKlein'));
     $('btnText').onclick = () => a.textOeffnen();
-    $('btnBlatt').onclick = () => this.akkordblattOeffnen();
+    $('btnStart').onclick = () => a.startOeffnen();
+    $('btnBlatt').onclick = () => this.aktionen.liedblattOeffnen();
     $('btnEinst').onclick = () => this.blattOeffnen('einstellungen');
     $('blattZu').onclick = () => this.blattZu();
     $('blattHinter').onclick = () => this.blattZu();
-    $('abZu').onclick = () => $('akkordblatt').classList.add('versteckt');
-    $('abDrucken').onclick = () => window.print();
     // Fassung in zwei Schritten: Stil (Song, Begleit-Stile, Mein Arrangement) und Stufe
     const sf = $('selStil');
     sf.innerHTML = '';
@@ -601,6 +599,7 @@ export class Oberflaeche {
     } else {
       T('Auf dem iPad');
       F({ p: 'geraet.wachHalten', l: 'Bildschirm beim Üben wach halten', t: 'schalter' });
+      F({ p: 'geraet.start', l: 'Beim Öffnen zeigen', t: 'auswahl', o: [['auto', 'Automatisch (iPad: Startseite)'], ['start', 'Startseite'], ['klavier', 'Klavier'], ['liedblatt', 'Liedblatt'], ['text', 'Text lernen']] });
       F({ p: 'geraet.pedal', l: 'Bluetooth-Pedal / Tastatur', t: 'auswahl', o: [['geklappt', 'rechts = Geklappt, links = Nochmal'], ['takt', 'rechts/links = Takt vor/zurück']], h: 'Seitenwender-Pedale senden Pfeiltasten; Leertaste = Start/Stopp, Enter = Geklappt' });
       box.insertAdjacentHTML('beforeend', `
         <div class="abschnittstitel">Bedienung</div>
@@ -610,7 +609,10 @@ export class Oberflaeche {
         <div class="abschnittstitel">Offline</div>
         <p class="text-hilfe" id="infoOffline">Wird geprüft …</p>
         <div class="abschnittstitel">Über</div>
-        <p class="text-hilfe">Privates Übungsprogramm. Inhalte liegen verschlüsselt im Netz und werden nur auf diesem iPad entschlüsselt.<br>Stand: <span id="infoStand"></span></p>`);
+        <p class="text-hilfe">Privates Übungsprogramm. Inhalte liegen verschlüsselt im Netz und werden nur auf diesem Gerät entschlüsselt.<br>Stand: <span id="infoStand"></span></p>`);
+      box.appendChild(updateBaustein());
+      box.appendChild(el('div', 'abschnittstitel', 'Sicherung'));
+      box.appendChild(sicherungBaustein((t, ms) => this.toast(t, ms)));
       const b = el('button', 'knopf', 'Alle Einstellungen zurücksetzen');
       b.onclick = () => { if (confirm('Alle Einstellungen auf Standard zurücksetzen? (Lernstände bleiben)')) { this.einst.zuruecksetzen(); this.toast('Einstellungen zurückgesetzt'); } };
       box.appendChild(b);
@@ -721,56 +723,6 @@ export class Oberflaeche {
       zeile.appendChild(box);
     }
     return zeile;
-  }
-
-  // ================================================================== Akkordblatt
-  akkordblattOeffnen() {
-    const s = this.song;
-    const sys = this.einst.get('ansicht.akkordSystem');
-    const box = document.getElementById('abInhalt');
-    box.innerHTML = '';
-    const tonart = s.tonartName || 'Des-Dur';
-    const titel = el('div', 'blatt-titel', '<h1></h1><div></div>');
-    titel.querySelector('h1').textContent = s.titel || '';
-    titel.querySelector('div').textContent = [s.kuenstlerin, tonart, `${s.bpm} BPM`, s.fassung.art === 'begleitung' ? 'Begleitung zum Singen' : 'Klavierfassung'].filter(Boolean).join(' · ');
-    box.appendChild(titel);
-    document.getElementById('abTitel').textContent = `Akkordblatt · ${tonart}`;
-    // Spickzettel: Muster des gewaehlten Begleit-Stils
-    const stilSb = (s.stile || []).find((x) => x.id === s.fassung.stil)?.steckbrief;
-    if (stilSb) { const m = el('div', 'blatt-muster', '<b></b> <span></span>'); m.querySelector('b').textContent = `${s.fassung.name}:`; m.querySelector('span').textContent = stilSb.muster; box.appendChild(m); }
-    for (const ab of s.abschnitte) {
-      const teil = el('div', 'blatt-teil', '<h2></h2>');
-      teil.querySelector('h2').textContent = ab.name;
-      const akk = s.akkorde.filter((a) => a.t < ab.te - 0.05 && a.te > ab.t + 0.05);
-      const takte = [];
-      for (let b = (ab.von - 1) * 4; b < ab.bis * 4; b += 4) {
-        const im = akk.filter((a) => a.b < b + 4 - 1e-6 && a.b + a.d > b + 1e-6).map((a) => akkordName(a.sym, sys));
-        takte.push([...new Set(im)].join(' '));
-      }
-      const zeilenTakte = [];
-      for (let i = 0; i < takte.length; i += 4) zeilenTakte.push('| ' + takte.slice(i, i + 4).map((x) => x.padEnd(9)).join('| ') + '|');
-      teil.insertAdjacentHTML('beforeend', `<div class="blatt-takte">${zeilenTakte.map(esc).join('<br>')}</div>`);
-      for (const z of s.zeilen.filter((x) => x.ts >= ab.t - 0.4 && x.ts < ab.te - 0.2)) {
-        const zeile = el('div', `blatt-zeile${z.summen ? ' summen' : ''}`);
-        const silben = zeilenSilben(z.text);
-        const zeiten = silben.length === z.silben.length ? z.silben.map((n) => n.t) : silben.map((_, i) => z.ts + (i / silben.length) * (z.tEnde - z.ts));
-        const anSilbe = new Map();
-        for (const a of s.akkorde.filter((x) => x.t >= z.ts - 0.5 && x.t < z.tEnde)) {
-          let best = 0;
-          for (let i = 0; i < zeiten.length; i++) if (zeiten[i] <= a.t + 0.25) best = i;
-          anSilbe.set(best, (anSilbe.get(best) ? anSilbe.get(best) + ' ' : '') + akkordName(a.sym, sys));
-        }
-        silben.forEach((sb, i) => {
-          const sp = el('span', `sb${sb.neuesWort && i > 0 ? ' wortanfang' : ''}`, '<span class="ak"></span><span class="tx"></span>');
-          sp.querySelector('.ak').textContent = anSilbe.get(i) ? anSilbe.get(i) + ' ' : '';
-          sp.querySelector('.tx').textContent = sb.text;
-          zeile.appendChild(sp);
-        });
-        teil.appendChild(zeile);
-      }
-      box.appendChild(teil);
-    }
-    document.getElementById('akkordblatt').classList.remove('versteckt');
   }
 
   // ================================================================== Meldung

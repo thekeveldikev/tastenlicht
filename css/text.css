@@ -82,7 +82,13 @@
 .tx-stern.tx-voll svg { fill: var(--akzent-2); stroke: var(--akzent-2); }
 .tx-stern:active svg { transform: scale(0.9); }
 
-.tx-original { font: 700 40px/1.25 var(--schrift-titel); margin: 12px 0 6px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+/* Schriftgroesse (Text › Mehr): skaliert Zeile, Lautschrift und die grossen Uebungs-Texte */
+.tx-app { --tx-f: 1; --fo: 40px; --fl: 28px; --fg: 34px; --fk: 30px; }
+.tx-app[data-schrift="s"] { --tx-f: 0.86; }
+.tx-app[data-schrift="l"] { --tx-f: 1.16; }
+.tx-app[data-schrift="xl"] { --tx-f: 1.32; }
+
+.tx-original { font: 700 calc(var(--fo) * var(--tx-f))/1.25 var(--schrift-titel); margin: 12px 0 6px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
 .tx-wort { display: inline-flex; border-radius: 10px; padding: 1px 6px; cursor: pointer; transition: background 0.15s; }
 .tx-wort.tx-gewaehlt, .tx-wortlaut.tx-gewaehlt { background: rgba(255, 255, 255, 0.10); }
 .tx-silbe { transition: color 0.08s, text-shadow 0.08s; color: var(--text); white-space: pre; }
@@ -92,7 +98,7 @@
 .tx-original.tx-summen { font-style: italic; color: var(--text-2); }
 .tx-original.tx-summen .tx-silbe { color: var(--text-2); }
 
-.tx-laut { font-size: 28px; line-height: 1.35; font-weight: 600; color: var(--akzent-2); display: flex; flex-wrap: wrap; gap: 2px 12px;
+.tx-laut { font-size: calc(var(--fl) * var(--tx-f)); line-height: 1.35; font-weight: 600; color: var(--akzent-2); display: flex; flex-wrap: wrap; gap: 2px 12px;
   letter-spacing: 0.3px; min-height: 1.35em; }
 .tx-laut .tx-blass { font-size: 18px; font-weight: 500; }
 .tx-wortlaut { border-radius: 8px; padding: 1px 6px; cursor: pointer; }
@@ -123,7 +129,7 @@
 .tx-erkl { color: var(--text-2); line-height: 1.5; margin-bottom: 12px; font-size: 16px; }
 .tx-erkl.tx-tipp { margin-top: 16px; margin-bottom: 0; color: var(--text-3); font-size: 15px; }
 .tx-reihe { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
-.tx-gross { font: 700 34px/1.4 var(--schrift-titel); display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0 4px; min-height: 52px; align-items: center; }
+.tx-gross { font: 700 calc(var(--fg) * var(--tx-f))/1.4 var(--schrift-titel); display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0 4px; min-height: 52px; align-items: center; }
 .tx-luecke, .tx-anfang { font: inherit; min-height: 48px; padding: 0 10px; border-radius: 10px; cursor: pointer; -webkit-appearance: none; appearance: none; }
 .tx-luecke { min-width: 2.4em; background: rgba(255, 255, 255, 0.07); border: 1px dashed rgba(255, 255, 255, 0.28); color: transparent; }
 .tx-luecke.tx-auf { color: var(--akzent-2); background: transparent; border-color: transparent; }
@@ -135,7 +141,7 @@
 
 .tx-kartei { padding: 24px; border-radius: 16px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--rand); text-align: center; }
 .tx-kartei-vorne { color: var(--text-2); margin-bottom: 10px; font-size: 16px; }
-.tx-kartei-hinten { font: 700 30px/1.35 var(--schrift-titel); margin: 8px 0; }
+.tx-kartei-hinten { font: 700 calc(var(--fk) * var(--tx-f))/1.35 var(--schrift-titel); margin: 8px 0; }
 .tx-kartei-laut { display: block; font-size: 22px; font-weight: 600; color: var(--akzent-2); margin-top: 8px; }
 .tx-bewerten { flex-direction: column; gap: 0; min-width: 116px; min-height: 56px; line-height: 1.15; }
 .tx-bewerten small { font-size: 12px; font-weight: 500; opacity: 0.75; }
@@ -220,8 +226,7 @@
 }
 
 @media (orientation: landscape) and (max-width: 1299px) {
-  .tx-app { grid-template-columns: 250px minmax(0, 1fr); grid-template-areas: "kopf kopf" "liste mitte"; }
-  .tx-original { font-size: 38px; }
+  .tx-app { grid-template-columns: 250px minmax(0, 1fr); grid-template-areas: "kopf kopf" "liste mitte"; --fo: 38px; }
 }
 
 /* ---------- Hochformat: Leiste oben, Zeilenliste als Blatt von links ---------- */
@@ -234,15 +239,13 @@
     transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.25s; }
   .tx-liste.tx-offen { transform: none; visibility: visible; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .tx-blatt-kopf { display: flex; }
-  .tx-original { font-size: 40px; }
+  .tx-app { --fo: 40px; }
 }
 
 /* hohe Hochformate (iPad Pro 13" hochkant): den Platz fuer groessere Schrift und Melodie nutzen */
 @media (orientation: portrait) and (min-height: 1300px) {
-  .tx-original { font-size: 44px; }
-  .tx-laut { font-size: 30px; }
+  .tx-app { --fo: 44px; --fl: 30px; --fg: 38px; }
   .tx-melodie { height: 150px; }
-  .tx-gross { font-size: 38px; }
 }
 
 /* schmale Hochformate (iPad Pro 11" hochkant): Kopf straffen */
@@ -250,11 +253,181 @@
   .tx-unter { display: none; }
   .tx-k-nach span { display: none; }
   .tx-k-nach { padding: 0; width: var(--tipp); border-radius: 50%; }
-  .tx-original { font-size: 38px; }
+  .tx-app { --fo: 38px; }
 }
 
 /* niedrige Fenster (Querformat 11"): Melodie-Leiste etwas flacher */
 @media (max-height: 900px) {
   .tx-melodie { height: 92px; margin: 10px 0; }
   .tx-original { margin-top: 8px; }
+}
+
+/* ======================================================================= Boni (iPad und iPhone) */
+.tx-kurzstand, .tx-daumen, .tx-k-quelle, .tx-k-tempo { display: none; }
+.tx-stand .tx-serie svg { width: 16px; height: 16px; color: var(--akzent-2); }
+.tx-stand .pille.tx-ziel-ok { border-color: rgba(255, 211, 107, 0.6); color: var(--akzent-2); }
+.tx-seg-voll { display: flex; flex-wrap: wrap; max-width: 100%; }
+.tx-seg-voll button { flex: 1 1 auto; }
+.tx-nach-inhalt .tx-seg-voll { margin: 6px 0 4px; }
+.tx-app .knopf.tx-rot { border-color: var(--gefahr); color: #ffd0d0; background: rgba(255, 107, 107, 0.16); }
+
+/* Unterwegs */
+.tx-uw { padding: 14px 16px; border-radius: 16px; background: rgba(0, 0, 0, 0.28); border: 1px solid var(--rand); }
+.tx-uw-kopf { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+.tx-uw-phase { height: 32px; font-size: 14px; }
+.tx-uw-phase.tx-uw-hoeren, .tx-uw-phase.tx-uw-hoeren2 { border-color: rgba(79, 156, 255, 0.7); color: #b9d7ff; }
+.tx-uw-phase.tx-uw-du { border-color: rgba(255, 211, 107, 0.8); color: #1b1405; background: var(--akzent-2); }
+.tx-uw-phase.tx-uw-kontrolle { border-color: rgba(147, 221, 58, 0.7); color: var(--akzent); }
+.tx-uw-zeit { color: var(--text-3); font-size: 14px; font-variant-numeric: tabular-nums; }
+.tx-uw-text { font: 700 calc(var(--fg) * var(--tx-f) * 0.82)/1.35 var(--schrift-titel); margin: 10px 0 12px; min-height: 2.7em; }
+.tx-uw-text.tx-blass { font-size: 17px; font-weight: 500; min-height: 0; }
+.tx-uw-balken { display: block; }
+.tx-uw-info { font-size: 14px; margin-top: 8px; min-height: 1.4em; }
+.tx-uw-play { min-width: 150px; }
+.tx-uw-feld { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 12px; }
+.tx-uw-label { width: 64px; color: var(--text-3); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.tx-modus .feld { min-height: 52px; }
+
+/* Woerter ordnen */
+.tx-pz-loesung { min-height: 60px; padding: 8px 10px; border-radius: 14px; background: rgba(0, 0, 0, 0.22); border: 1px solid var(--rand); }
+.tx-pz-platz { color: var(--text-3); }
+.tx-pz-ok { color: var(--akzent); }
+.tx-pz-vorrat { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.tx-pz-wort { min-height: 52px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--rand-stark); background: var(--glas-hell); color: var(--text);
+  font: 700 calc(22px * var(--tx-f))/1.2 var(--schrift-titel); cursor: pointer; -webkit-appearance: none; appearance: none; transition: opacity 0.2s, border-color 0.15s; }
+.tx-pz-wort.tx-weg { opacity: 0.18; }
+.tx-pz-wort.tx-falsch { border-color: var(--gefahr); background: rgba(255, 107, 107, 0.18); }
+.tx-pz-wort.tx-tipp-an { border-color: var(--akzent-2); box-shadow: 0 0 0 2px rgba(255, 211, 107, 0.5); }
+.tx-pz-meldung { margin: 12px 0 0; min-height: 1.5em; }
+
+/* Wort-Quiz */
+.tx-quiz-frage { font: 800 calc(var(--fg) * var(--tx-f))/1.25 var(--schrift-titel); text-align: center; margin: 14px 0 12px; color: var(--akzent-2); }
+.tx-quiz-optionen { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tx-quiz-option { min-height: 56px; padding: 8px 14px; border-radius: 14px; border: 1px solid var(--rand-stark); background: var(--glas-hell); color: var(--text);
+  font-size: calc(17px * var(--tx-f)); font-weight: 600; text-align: left; line-height: 1.3; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.tx-quiz-option:disabled { opacity: 0.55; }
+.tx-quiz-option.tx-richtig { opacity: 1; border-color: var(--akzent); background: rgba(147, 221, 58, 0.2); }
+.tx-quiz-option.tx-falsch { opacity: 1; border-color: var(--gefahr); background: rgba(255, 107, 107, 0.18); }
+.tx-quiz-info { margin: 14px 0 0; }
+.tx-quiz-fuss { margin-top: 14px; font-size: 14px; }
+
+/* Ich & Original */
+.tx-vg-status { padding: 12px 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--rand); font-weight: 600; min-height: 48px; }
+.tx-vg-status.tx-rot { border-color: rgba(255, 107, 107, 0.6); color: #ffd0d0; }
+
+/* Mehr und Fortschritt */
+.tx-code { width: 100%; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rand); background: rgba(0, 0, 0, 0.3); color: var(--text);
+  font: 13px/1.4 ui-monospace, Menlo, monospace; resize: vertical; -webkit-user-select: text; user-select: text; }
+.tx-tipps { margin: 4px 0 0; padding-left: 20px; color: var(--text-2); }
+.tx-tipps li { margin: 6px 0; }
+.tx-woche { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.tx-woche div { text-align: center; padding: 8px 0; border-radius: 10px; background: var(--glas-hell); border: 1px solid var(--rand); }
+.tx-woche b { display: block; font: 700 19px/1.2 var(--schrift-titel); }
+.tx-woche small { color: var(--text-3); font-size: 12px; }
+
+/* ======================================================================= iPhone (html.handy) */
+html.handy .tx-app { gap: 8px; --fo: 27px; --fl: 19px; --fg: 24px; --fk: 22px;
+  padding: calc(6px + var(--oben)) calc(10px + var(--rechts)) calc(10px + var(--unten)) calc(10px + var(--links)); }
+html.handy .tx-kopf { gap: 6px; min-height: 48px; }
+html.handy .tx-titel { font-size: 23px; }
+html.handy .tx-unter, html.handy .tx-stand, html.handy .tx-k-klavier { display: none; }
+html.handy .tx-kurzstand { display: block; color: var(--text-3); font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.handy .tx-kurzstand.tx-ziel-ok { color: var(--akzent-2); }
+html.handy .tx-marke { flex: 1; }
+html.handy .tx-kopf > .tx-frei { display: none; }
+html.handy .tx-k-nach span { display: none; }
+html.handy .tx-k-nach { padding: 0; width: var(--tipp); border-radius: 50%; }
+html.handy .tx-leiste { gap: 5px; padding-bottom: 4px; }
+html.handy .tx-chip { min-width: 40px; height: 40px; padding: 0 6px; font-size: 15px; }
+html.handy .tx-mitte { gap: 10px; padding-bottom: calc(80px + var(--unten)); }
+html.handy .tx-karte { padding: 8px 12px 12px; touch-action: pan-y; }
+html.handy .tx-karte-kopf { gap: 4px 8px; min-height: 40px; }
+html.handy .tx-abschnitt { height: 30px; padding: 0 10px; font-size: 13px; }
+html.handy .tx-zknr { font-size: 12.5px; }
+html.handy .tx-wdh { font-size: 12px; }
+html.handy .tx-stern { width: 30px; height: 40px; }
+html.handy .tx-stern svg { width: 20px; height: 20px; }
+html.handy .tx-original { margin: 6px 0 4px; gap: 0 4px; }
+html.handy .tx-wort { padding: 1px 3px; }
+html.handy .tx-laut { gap: 0 6px; letter-spacing: 0; }
+html.handy .tx-betont { text-underline-offset: 4px; }
+html.handy .tx-melodie { height: 74px; margin: 8px 0; }
+html.handy .tx-steuer { gap: 8px; flex-wrap: nowrap; }
+html.handy .tx-steuer .segmente { display: none; }
+html.handy .tx-k-quelle, html.handy .tx-k-tempo { display: inline-flex; }
+html.handy .tx-steuer > .knopf { flex: 1 1 0; min-width: 0; padding: 0 8px; gap: 6px; font-size: 15px; }
+html.handy .tx-steuer > .knopf svg { width: 19px; height: 19px; }
+html.handy .tx-echo { right: 8px; padding: 8px 14px; margin-top: -22px; font-size: 20px; }
+/* Modi als seitlich scrollende Leiste */
+html.handy .tx-modi { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin: 0 -10px; padding: 0 10px 2px; gap: 6px; }
+html.handy .tx-modi::-webkit-scrollbar { display: none; }
+html.handy .tx-modi button { flex: none; min-height: 44px; padding: 0 12px; font-size: 14px; gap: 6px; }
+html.handy .tx-modi button svg { width: 18px; height: 18px; }
+html.handy .tx-modus { padding: 12px 12px 14px; min-height: 0; }
+html.handy .tx-modus h3 { font-size: 18px; }
+html.handy .tx-erkl { font-size: 14.5px; line-height: 1.45; margin-bottom: 10px; }
+html.handy .tx-erkl.tx-tipp { font-size: 13.5px; }
+html.handy .tx-gross { gap: 4px 8px; min-height: 44px; }
+html.handy .tx-reihe { gap: 8px; margin-top: 12px; }
+html.handy .tx-reihe > .knopf { flex: 1 1 auto; padding: 0 12px; font-size: 15px; }
+html.handy .tx-reihe > .segmente { flex: 1 1 100%; }
+html.handy .tx-reihe > .segmente button { flex: 1 1 auto; min-width: 0; padding: 0 6px; }
+html.handy .tx-bew-reihe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+html.handy .tx-bew-reihe .tx-bewerten { min-width: 0; padding: 0 4px; font-size: 15px; }
+html.handy .tx-kartei { padding: 16px 12px; }
+html.handy .tx-kartei-laut { font-size: 17px; }
+html.handy .tx-luecke, html.handy .tx-anfang { min-height: 44px; padding: 0 6px; }
+html.handy .tx-lied-jetzt { min-height: 80px; }
+html.handy .tx-uw { padding: 12px; }
+html.handy .tx-uw-label { width: 100%; }
+html.handy .tx-uw-feld .segmente { flex: 1 1 100%; }
+html.handy .tx-uw-feld .segmente button { padding: 0 6px; font-size: 14px; min-width: 0; }
+html.handy .tx-uw-play { min-width: 0; }
+html.handy .tx-pz-vorrat { gap: 8px; }
+html.handy .tx-pz-wort { min-height: 48px; padding: 0 12px; font-size: calc(19px * var(--tx-f)); }
+html.handy .tx-quiz-optionen { grid-template-columns: 1fr; gap: 8px; }
+html.handy .tx-quiz-option { min-height: 52px; }
+html.handy .tx-bsp { grid-template-columns: 1fr 1fr; }
+html.handy .tx-bsp > :last-child { grid-column: 1 / -1; }
+html.handy .tx-nach-inhalt { padding: 10px 14px 24px; font-size: 15.5px; }
+html.handy .tx-reiter { padding: 8px 8px 0; gap: 4px; }
+html.handy .tx-reiter button { min-height: 40px; padding: 0 10px; font-size: 14px; }
+html.handy .tx-kacheln .tx-kachel b { font-size: 21px; }
+html.handy .tx-woche { gap: 4px; }
+html.handy .tx-woche b { font-size: 17px; }
+/* Blaetter fast bildschirmbreit */
+@media (orientation: portrait) {
+  html.handy .tx-liste { left: calc(8px + var(--links)); top: calc(8px + var(--oben)); bottom: calc(8px + var(--unten)); width: calc(100% - 44px);
+    transform: translateX(calc(-100% - 60px - var(--links))); }
+  html.handy .tx-liste.tx-offen { transform: none; }
+}
+html.handy .tx-nach { right: calc(8px + var(--rechts)); top: calc(8px + var(--oben)); bottom: calc(8px + var(--unten)); width: calc(100% - 16px - var(--links) - var(--rechts));
+  transform: translateX(calc(100% + 60px + var(--rechts))); }
+html.handy .tx-nach.tx-offen { transform: none; }
+html.handy .tx-pop { max-width: calc(100% - 20px); }
+/* Daumen-Leiste unten */
+html.handy .tx-daumen { display: flex; position: absolute; z-index: 15; left: calc(10px + var(--links)); right: calc(10px + var(--rechts)); bottom: calc(8px + var(--unten));
+  align-items: center; gap: 8px; padding: 7px 8px; border-radius: 24px; background: rgba(18, 20, 29, 0.92); }
+html.handy .tx-daumen .tx-transport { flex: 1; min-width: 0; justify-content: space-between; gap: 8px; }
+html.handy .tx-daumen .tx-play { flex: 1; min-width: 0; min-height: 52px; padding: 0 10px; }
+html.handy .tx-daumen > .knopf span { display: none; }
+html.handy .tx-daumen > .knopf { padding: 0; width: var(--tipp); flex: none; }
+/* Unterwegs: Echo und Schleife gelten fuer die Zeilen-Wiedergabe, nicht fuer die Spur */
+html.handy .tx-app[data-modus="unterwegs"] .tx-daumen > .knopf { display: none; }
+/* toast oberhalb der Daumen-Leiste */
+html.handy #toast { bottom: calc(84px + var(--unten)); max-width: calc(100vw - 24px); }
+
+/* iPhone quer: Zeilenliste links, Leiste unten rechts daneben, alles etwas flacher */
+@media (orientation: landscape) {
+  html.handy .tx-app { grid-template-columns: 200px minmax(0, 1fr); --fo: 24px; --fl: 17px; --fg: 21px; }
+  html.handy .tx-kopf { min-height: 40px; }
+  html.handy .tx-kopf .knopf.rund, html.handy .tx-k-nach { min-height: 40px; min-width: 40px; width: 40px; }
+  html.handy .tx-titel { font-size: 19px; }
+  html.handy .tx-daumen { left: calc(10px + var(--links) + 208px); padding: 5px 8px; }
+  html.handy .tx-daumen .tx-play { min-height: 44px; }
+  html.handy .tx-mitte { padding-bottom: calc(66px + var(--unten)); }
+  html.handy .tx-melodie { height: 56px; }
+  html.handy .tx-zeile { min-height: 40px; padding: 4px 8px; }
+  html.handy .tx-tx { font-size: 13.5px; }
+  html.handy #toast { bottom: calc(70px + var(--unten)); }
 }

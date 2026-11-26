@@ -59,7 +59,7 @@ function sperre(fehler) {
       <button class="knopf akzent" style="min-height:56px;padding:0 26px;font-size:18px" id="auf">Öffnen</button>
     </form>
     ${fehler ? '<p style="color:var(--gefahr);font-weight:600">Das war nicht das Geheimwort.</p>' : ''}
-    <p class="text-hilfe" style="margin-top:18px">Wird auf diesem iPad gemerkt – danach öffnet die App direkt.</p>`);
+    <p class="text-hilfe" style="margin-top:18px">Wird auf diesem Gerät gemerkt – danach öffnet die App direkt.</p>`);
   const feld = k.querySelector('#wort');
   let gesendet = false;
   k.querySelector('#tresorForm').onsubmit = async (e) => {
@@ -84,14 +84,14 @@ async function einrichtung(wort) {
   } catch { sperre(true); return; }
   if (istStandalone()) { history.replaceState(null, '', location.pathname + location.search); appLaden(); return; }
   const k = karte(`${SCHLOSS}<h1>Freigeschaltet</h1>
-    <p>Jetzt am besten: ${TEILEN} <b>Teilen</b> antippen, dann <b>Zum Home-Bildschirm</b>.<br>Dann liegt Tastenlicht wie eine App auf dem iPad und läuft auch ohne Internet.</p>
+    <p>Jetzt am besten: ${TEILEN} <b>Teilen</b> antippen, dann <b>Zum Home-Bildschirm</b>.<br>Dann liegt Tastenlicht wie eine App auf dem Home-Bildschirm und läuft auch ohne Internet.</p>
     <button class="knopf akzent startknopf" id="hierOeffnen">Gleich hier öffnen</button>`);
   k.querySelector('#hierOeffnen').onclick = () => appLaden();
 }
 
 async function start() {
   if (!('serviceWorker' in navigator) || !window.crypto?.subtle) {
-    karte('<h1>Oh je</h1><p>Dieses Gerät ist leider zu alt (nötig: iPadOS 16 oder neuer).</p>');
+    karte('<h1>Oh je</h1><p>Dieses Gerät ist leider zu alt (nötig: iOS bzw. iPadOS 16 oder neuer).</p>');
     return;
   }
   try {

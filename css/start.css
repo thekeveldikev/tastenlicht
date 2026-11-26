@@ -1,0 +1,129 @@
+/* Startseite: Ueberblick (heute, Serie, Woche), Kacheln fuer alle Bereiche, Begleit-Stile. Klassen mit st-. Kein color-mix. */
+#startWurzel { position: fixed; inset: 0; z-index: 40; background: #06070b; opacity: 0; transition: opacity .3s; }
+#startWurzel.st-da { opacity: 1; }
+.st-app { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); grid-template-areas: "kopf heute" "kacheln heute" "stile heute" "fuss fuss";
+  align-content: start; gap: 18px 22px; padding: calc(28px + var(--oben)) calc(32px + var(--rechts)) calc(24px + var(--unten)) calc(32px + var(--links));
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(79, 156, 255, 0.20), transparent 46%),
+    radial-gradient(ellipse at 100% 18%, rgba(255, 211, 107, 0.12), transparent 42%),
+    radial-gradient(ellipse at 40% 110%, rgba(147, 221, 58, 0.14), transparent 50%),
+    linear-gradient(180deg, #0b0d15 0%, #06070b 100%); }
+
+/* Kopf */
+.st-kopf { grid-area: kopf; padding: 6px 2px 0; }
+.st-gruss { color: var(--text-3); font-weight: 700; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; }
+.st-titel { margin: 4px 0 2px; font: 900 clamp(44px, 6.4vw, 78px)/0.98 var(--schrift-titel); letter-spacing: -0.02em;
+  background: linear-gradient(100deg, #ffe08a 0%, #ffd36b 30%, #b9ea6a 70%, #6fd0ff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.st-unter { color: var(--text-2); font-size: 17px; }
+
+/* Heute */
+.st-heute { grid-area: heute; align-self: start; display: grid; grid-template-columns: auto 1fr; gap: 18px 18px; padding: 22px; border-radius: 26px;
+  background: linear-gradient(160deg, rgba(30, 34, 48, 0.85), rgba(14, 16, 24, 0.85)); }
+.st-ring { position: relative; width: 128px; height: 128px; }
+.st-ring svg { width: 128px; height: 128px; transform: rotate(-90deg); }
+.st-ring circle { fill: none; stroke-width: 11; }
+.st-ring-grund { stroke: rgba(255, 255, 255, 0.08); }
+.st-ring-wert { stroke: url(#st-verlauf); stroke: var(--akzent); stroke-linecap: round; transition: stroke-dasharray .8s cubic-bezier(.2, .8, .2, 1); }
+.st-ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.st-ring-text b { font: 900 38px/1 var(--schrift-titel); }
+.st-ring-text small { color: var(--text-3); font-size: 12.5px; margin-top: 4px; }
+.st-zahlen { display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+.st-zahlen div { display: flex; align-items: baseline; gap: 8px; }
+.st-zahlen b { font: 800 25px/1 var(--schrift-titel); min-width: 1.6em; }
+.st-zahlen b span { color: var(--text-3); font-size: 16px; font-weight: 700; }
+.st-zahlen small { color: var(--text-2); font-size: 14px; }
+.st-woche { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; height: 124px; align-items: end; padding-top: 6px; border-top: 1px solid var(--rand); }
+.st-tag { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+.st-saeule { width: 100%; max-width: 30px; height: 88px; border-radius: 9px; background: rgba(255, 255, 255, 0.05); display: flex; flex-direction: column-reverse; overflow: hidden; }
+.st-saeule i { display: block; width: 100%; }
+i.st-k { background: linear-gradient(180deg, #a8ef5a, #6cbf2a); }
+i.st-t { background: linear-gradient(180deg, #c9a6ff, #8f6ad8); }
+.st-tag small { color: var(--text-3); font-size: 12px; font-weight: 700; }
+.st-tag.st-tag-heute small { color: var(--akzent); }
+.st-legende { grid-column: 1 / -1; display: flex; gap: 16px; color: var(--text-3); font-size: 12.5px; margin-top: -6px; }
+.st-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.st-legende i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* Kacheln */
+.st-kacheln { grid-area: kacheln; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.st-kachel { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-height: 150px; padding: 18px 18px 16px; text-align: left;
+  border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.10); color: var(--text); cursor: pointer; overflow: hidden;
+  background: linear-gradient(150deg, var(--k1), var(--k2)); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform .12s, box-shadow .2s; -webkit-appearance: none; appearance: none; }
+.st-kachel::after { content: ""; position: absolute; right: -30px; top: -30px; width: 130px; height: 130px; border-radius: 50%; background: var(--k3); opacity: .35; filter: blur(8px); pointer-events: none; }
+.st-kachel:active { transform: scale(0.975); }
+.st-gross { grid-column: span 2; }
+.st-ksym { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.16); }
+.st-ksym svg { width: 28px; height: 28px; stroke-width: 1.8; }
+.st-ktext { display: flex; flex-direction: column; gap: 4px; position: relative; z-index: 1; }
+.st-ktext b { font: 800 22px/1.15 var(--schrift-titel); }
+.st-ktext small { color: rgba(255, 255, 255, 0.74); font-size: 14px; line-height: 1.35; }
+.st-gross .st-ktext b { font-size: 28px; }
+.st-marke { position: absolute; right: 14px; top: 14px; z-index: 1; padding: 3px 10px; border-radius: 999px; background: #ffd36b; color: #1b1405; font: 800 12px/1.4 var(--schrift); letter-spacing: .04em; text-transform: uppercase; }
+.st-gruen { --k1: #2f6b1d; --k2: #173a12; --k3: #a6f05a; }
+.st-blau { --k1: #1f4f93; --k2: #12284f; --k3: #6fb6ff; }
+.st-gold { --k1: #7a5a14; --k2: #3d2c0a; --k3: #ffd36b; }
+.st-lila { --k1: #4f3291; --k2: #261a4a; --k3: #c8a6ff; }
+.st-tuerkis { --k1: #1b6466; --k2: #0f3335; --k3: #6fe3d6; }
+.st-rot { --k1: #7a2533; --k2: #3c1219; --k3: #ff8fa3; }
+
+/* Stile */
+.st-stile { grid-area: stile; padding: 4px 2px 0; }
+.st-stile-kopf { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.st-stile-kopf b { font: 800 18px/1.2 var(--schrift-titel); }
+.st-stile-kopf small { color: var(--text-3); font-size: 14px; }
+.st-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.st-chip { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--rand-stark); background: rgba(255, 255, 255, 0.05); color: var(--text-2); font: 700 15px/1 var(--schrift); cursor: pointer; }
+.st-chip.an { background: var(--akzent); color: #0b1020; border-color: transparent; }
+
+.st-fuss { grid-area: fuss; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--text-3); font-size: 13px; padding-top: 6px; border-top: 1px solid var(--rand); }
+.st-update { min-height: 40px; font-size: 14px; }
+
+/* iPad hochkant und schmaler: eine Spalte, "Heute" oben */
+@media (max-width: 1100px), (orientation: portrait) {
+  .st-app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "kopf" "heute" "kacheln" "stile" "fuss"; }
+  .st-heute { grid-template-columns: auto auto 1fr; align-items: center; }
+  .st-woche { grid-column: 3; grid-row: 1; border-top: 0; height: 128px; padding-top: 0; }
+  .st-legende { grid-column: 1 / -1; margin-top: 0; }
+}
+@media (max-width: 760px) {
+  .st-heute { grid-template-columns: auto 1fr; }
+  .st-woche { grid-column: 1 / -1; grid-row: auto; border-top: 1px solid var(--rand); padding-top: 8px; }
+  .st-kacheln { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* iPhone */
+html.handy .st-app { gap: 14px; padding: calc(18px + var(--oben)) calc(14px + var(--rechts)) calc(18px + var(--unten)) calc(14px + var(--links)); }
+html.handy .st-titel { font-size: 46px; }
+html.handy .st-unter { font-size: 15px; }
+html.handy .st-heute { padding: 16px; gap: 14px; border-radius: 22px; }
+html.handy .st-ring, html.handy .st-ring svg { width: 104px; height: 104px; }
+html.handy .st-ring-text b { font-size: 30px; }
+html.handy .st-kacheln { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+html.handy .st-kachel { min-height: 124px; padding: 14px; border-radius: 20px; gap: 12px; }
+html.handy .st-ksym { width: 42px; height: 42px; border-radius: 13px; }
+html.handy .st-ksym svg { width: 23px; height: 23px; }
+html.handy .st-ktext b { font-size: 18px; }
+html.handy .st-gross .st-ktext b { font-size: 22px; }
+html.handy .st-ktext small { font-size: 12.5px; }
+html.handy .st-chip { min-height: 40px; padding: 0 13px; font-size: 14px; }
+html.handy .tx-k-start { display: none; }
+
+.st-orange { --k1: #8a4a12; --k2: #43230a; --k3: #ffb35c; }
+.st-grau { --k1: #39414f; --k2: #1b2029; --k3: #9fb4d0; }
+/* Ring: bei 0 Minuten keinen Punkt zeichnen */
+.st-ring-wert.st-null { opacity: 0; }
+
+/* Tipp des Tages */
+.st-app { grid-template-areas: "kopf heute" "kacheln heute" "kacheln tipp" "stile tipp" "fuss fuss"; }
+.st-tipp { grid-area: tipp; align-self: start; padding: 16px 18px 18px; border-radius: 22px; background: linear-gradient(160deg, rgba(48, 40, 18, 0.75), rgba(20, 18, 12, 0.75)); border-color: rgba(255, 211, 107, 0.25); }
+.st-tipp-kopf { display: flex; align-items: center; gap: 8px; color: var(--akzent-2); }
+.st-tipp-kopf b { font: 800 15px/1 var(--schrift-titel); letter-spacing: .08em; text-transform: uppercase; }
+.st-tipp-kopf .lb-frei { flex: 1; }
+.st-tipp-weiter { min-height: 40px; min-width: 40px; width: 40px; }
+.st-tipp p { margin: 8px 0 0; color: var(--text); font-size: 16px; line-height: 1.5; }
+@media (max-width: 1100px), (orientation: portrait) {
+  .st-app { grid-template-areas: "kopf" "heute" "kacheln" "tipp" "stile" "fuss"; }
+}
+.sicherung-reihe { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }

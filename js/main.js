@@ -12,6 +12,9 @@ import { mische } from './effekte.js';
 import { zeilenSilben } from './silben.js';
 import { symbol, setzeSymbol } from './symbole.js';
 import { TEXT_STANDARD } from './text.js';
+import { BLATT_STANDARD } from './liedblatt.js';
+import { updateEinrichten } from './update.js';
+import { StartSeite } from './start.js';
 
 const STANDARD = {
   ansicht: {
@@ -27,11 +30,13 @@ const STANDARD = {
   ebenenVorlage: 'voll',
   liedtext: { anzeigen: true, lautschrift: false, position: 'oben', gross: false },
   text: { ...TEXT_STANDARD },                       // Einstellungen der Text-Ansicht (Lautschule)
+  blatt: { ...BLATT_STANDARD },                     // Liedblatt: Akkorde ueber dem Text
   uebeweg: { laenge: 2, startTempo: 60, zielTempo: 100, pauseEinzaehlen: true, tagesZiel: 15, nachfragen: true },
-  geraet: { wachHalten: true, pedal: 'geklappt' },
+  geraet: { wachHalten: true, pedal: 'geklappt', start: 'auto' },   // start: auto | start | klavier | text | liedblatt
   fassung: 'begl3',
   baukasten: baukastenVorschlagWerte(),             // Mein Arrangement: je Liedteil ein Begleit-Stil
   tempo: 1,
+  zuletzt: { pos: 0, zeit: 0 },                     // Stelle im Lied beim letzten Mal (weiter, wo du warst)
 };
 
 function baukastenVorschlagWerte() {
@@ -59,6 +64,14 @@ function ladebildschirm(app) {
 
 const istStandalone = () => window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
+// iPhone (kurze Bildschirmseite unter 600 pt): startet direkt im Text-Teil, Klavier laedt still im Hintergrund.
+// Zum Pruefen am Rechner: ?geraet=handy bzw. ?geraet=tablet in der Adresse.
+function istHandy() {
+  const q = /[?&]geraet=(handy|tablet)\b/.exec(location.search);
+  if (q) return q[1] === 'handy';
+  return Math.min(screen.width || 9999, screen.height || 9999) < 600;
+}
+
 export async function starten(app) {
   const lade = ladebildschirm(app);
   try {
@@ -71,6 +84,8 @@ export async function starten(app) {
 
 async function aufbauen(app, lade) {
   try { navigator.storage?.persist?.(); } catch { /* egal */ }
+  const handy = istHandy();
+  document.documentElement.classList.toggle('handy', handy);
   const einst = new Einstellungen('klavier', STANDARD).laden();
   lade.text('Lied wird geladen …', 0.05);
   const song = await ladeSong('daten/');
@@ -89,14 +104,23 @@ async function aufbauen(app, lade) {
   setzeFassung(song, einst.get('fassung'), einst.get('klang.transposition') || 0);
   const engine = new AudioEngine();
   const tr = new Transport(engine, song);
-  tr.seek(song.anfang, { weiter: false });          // mit dem Vorspiel beginnen
+  // weiter, wo du warst (nicht ganz am Anfang oder am Ende, und nicht aelter als 30 Tage)
+  const zl = einst.get('zuletzt') || {};
+  const zurueckAn = zl.pos > song.anfang + 4 && zl.pos < song.ende - 6 && Date.now() - (zl.zeit || 0) < 30 * 86400000;
+  tr.seek(zurueckAn ? Math.max(song.anfang, zl.pos - 2) : song.anfang, { weiter: false });
   const canvas = document.createElement('canvas');
   canvas.id = 'buehne';
   app.prepend(canvas);
   const buehne = new Buehne(canvas);
 
-  lade.text('Klavier wird geladen …', 0.15);
-  await engine.sampler.ladeSatz('klavier', null, (a) => lade.text(`Klavier wird geladen … ${Math.round(a * 100)} %`, 0.15 + 0.8 * a));
+  if (handy) {
+    // iPhone: erst den Text-Teil (Aufnahmen), die Klaviertoene (nur fuer "Mit Klavier-Melodie") spaeter in Ruhe
+    lade.text('Text wird vorbereitet …', 0.6);
+    setTimeout(() => engine.sampler.ladeSatz('klavier').catch(() => {}), 8000);
+  } else {
+    lade.text('Klavier wird geladen …', 0.15);
+    await engine.sampler.ladeSatz('klavier', null, (a) => lade.text(`Klavier wird geladen … ${Math.round(a * 100)} %`, 0.15 + 0.8 * a));
+  }
 
   // ------------------------------------------------------------------ Darstellung je Note
   const sichtbar = (n) => n.hand !== 'V' && einst.get(`schichten.${n.l}`) !== false;
@@ -136,7 +160,8 @@ async function aufbauen(app, lade) {
   const klangAnwenden = () => {
     const k = einst.werte.klang;
     engine.setPegel('master', k.master);
-    engine.setPegel('klavier', k.klavier);
+    const blattStill = liedblatt?.sichtbar && (einst.get('blatt.klang') === 'stumm' || (einst.get('blatt.klang') === 'original' && !song.transposition));
+    engine.setPegel('klavier', blattStill ? 0 : k.klavier);
     engine.setPegel('klick', k.metronom);
     engine.setHall(k.hall);
     engine.sampler.verstimmungCent = song.stimmungCent || 0;
@@ -256,6 +281,9 @@ async function aufbauen(app, lade) {
 
   // ------------------------------------------------------------------ Oberflaeche
   let textAnsicht = null;
+  let liedblatt = null;
+  let startseite = null;
+  let blattVorher = null;                           // Klang-Einstellungen vor dem Liedblatt (werden beim Schliessen zurueckgesetzt)
   const schleifeVerlassen = (t) => {
     if (!tr.loop.aktiv || uw.aktiv) return;
     if (t < tr.loop.a - 0.05 || t >= tr.loop.b) { tr.loopAus(); ui.toast('Schleife aus'); ui.zustandSync(); }
@@ -285,34 +313,87 @@ async function aufbauen(app, lade) {
     schleifeSetzen: (a, b) => { tr.setLoop(a, b, true); if (tr.pos < a || tr.pos > b) tr.seek(a, { weiter: tr.spielt }); ui.zustandSync(); },
     uebewegUmschalten: () => { engine.aufwecken(); if (karussell) karussellUmschalten(); if (uw.aktiv) uw.beenden(); else uw.starten(); ui.zustandSync(); },
     stilWaehlen, stufeWaehlen, karussellUmschalten, karussellAktiv: () => !!karussell, musterUeben, akkordModusUmschalten, baukastenVorschlag,
-    textOeffnen: async (nr = null) => {
+    textOeffnen: async (nr = null, { modus = null } = {}) => {
       tr.pause();
       const w = document.getElementById('textWurzel');
       try {
         if (!textAnsicht) {
           const { TextAnsicht } = await import('./text.js');
           textAnsicht = new TextAnsicht({
-            wurzel: w, song, engine, einst, speicher, quelle, symbol, setzeSymbol,
+            wurzel: w, song, engine, einst, speicher, quelle, symbol, setzeSymbol, handy,
+            offlineInfo: () => aktionen.offlineInfo(),
             toast: (t, ms) => ui.toast(t, ms),
-            zurKlavier: () => { textAnsicht.verstecken(); w.classList.add('versteckt'); },
+            zurKlavier: () => { textAnsicht.verstecken(); w.classList.add('versteckt'); klavierWecken(); },
+            zumLiedblatt: () => aktionen.liedblattOeffnen(),
+            zurStartseite: () => { textAnsicht.verstecken(); w.classList.add('versteckt'); aktionen.startOeffnen(); },
           });
           w.classList.remove('versteckt');
           await textAnsicht.start();
         }
         w.classList.remove('versteckt');
+        if (modus && einst.get('text.modus') !== modus) { einst.set('text.modus', modus); textAnsicht._modiBauen(); }
         textAnsicht.zeigen(nr);
+        if (modus) textAnsicht._modusZeigen();
       } catch (e) { console.error(e); w.classList.add('versteckt'); ui.toast('Der Text-Teil ließ sich nicht öffnen', 2600); }
     },
+    liedblattOeffnen: async ({ buehne: aufDieBuehne = false, verdeckt = false } = {}) => {
+      const w = document.getElementById('blattWurzel');
+      textAnsicht?.stop?.();
+      try {
+        if (!liedblatt) {
+          const { LiedblattAnsicht } = await import('./liedblatt.js');
+          liedblatt = new LiedblattAnsicht({
+            wurzel: w, song, tr, engine, einst, speicher, symbol, setzeSymbol, handy, aktionen,
+            toast: (t, ms) => ui.toast(t, ms),
+            schliessen: () => aktionen.liedblattSchliessen(),
+          });
+        }
+        blattVorher = { spurQuelle: einst.get('klang.spurQuelle') };
+        await liedblatt.zeigen();
+        if (bild.ruht) { bild.ruht = false; letzteBildzeit = performance.now(); requestAnimationFrame(bild); }
+        if (aufDieBuehne && !liedblatt.buehne) liedblatt._buehne(true);
+        if (verdeckt) liedblatt.verdecken(true);
+        aktionen.blattKlang(einst.get('blatt.klang'));
+      } catch (e) { console.error(e); w.classList.add('versteckt'); ui.toast('Das Liedblatt ließ sich nicht öffnen', 2600); }
+    },
+    liedblattSchliessen: () => {
+      if (!liedblatt) return;
+      liedblatt.verstecken();
+      if (blattVorher && einst.get('klang.spurQuelle') !== blattVorher.spurQuelle) einst.set('klang.spurQuelle', blattVorher.spurQuelle);
+      blattVorher = null;
+      klangAnwenden();
+      if (!textOffen()) klavierWecken();
+      ui.zustandSync();
+    },
+    // Was beim Abspielen im Liedblatt klingt: klavier | original (Aufnahme, Klavier still) | gesang (Klavier + Gesangsspur) | stumm
+    blattKlang: (art) => {
+      if (!liedblatt?.sichtbar) return;
+      const aufnahme = !song.transposition;
+      const q = aufnahme && art === 'original' ? 'original' : aufnahme && art === 'gesang' ? 'gesang' : 'keine';
+      if (einst.get('klang.spurQuelle') !== q) einst.set('klang.spurQuelle', q);
+      const still = art === 'stumm' || (art === 'original' && aufnahme);
+      engine.setPegel('klavier', still ? 0 : einst.get('klang.klavier'));
+      if (!aufnahme && (art === 'original' || art === 'gesang')) ui.toast('Die Aufnahme gibt es nur in Des-Dur – jetzt spielt das Klavier', 2600);
+    },
+    uebewegAktiv: () => uw.aktiv,
+    startOeffnen: () => {
+      tr.pause();
+      if (!startseite) startseite = new StartSeite({ wurzel: document.getElementById('startWurzel'), song, einst, speicher, engine, aktionen, handy });
+      if (liedblatt?.sichtbar) aktionen.liedblattSchliessen();
+      startseite.zeigen();
+    },
+    startZu: () => { if (!textOffen() && !blattOffen()) klavierWecken(); },
     offlineInfo: async () => {
       if (!window.tresorFrage) return 'Entwicklungsfassung (ohne Offline-Speicher).';
       const s = await window.tresorFrage({ art: 'status' });
       if (!s) return 'Offline-Stand unbekannt.';
-      return s.da >= s.gesamt ? `Alles da – ${s.da} Dateien sind auf diesem iPad gespeichert, die App läuft auch ohne Internet.`
+      return s.da >= s.gesamt ? `Alles da – ${s.da} Dateien sind auf diesem Gerät gespeichert, die App läuft auch ohne Internet.`
         : `${s.da} von ${s.gesamt} Dateien gespeichert. Mit WLAN geöffnet lassen, dann lädt der Rest im Hintergrund.`;
     },
   };
   const ui = new Oberflaeche({ app, song, einst, tr, engine, buehne, uw, aktionen, phon: null });
   ui.bauen();
+  updateEinrichten({ toast: (t, ms) => ui.toast(t, ms) });
 
   // Lautschrift fuer den Liedtext (wird nachgeladen; ohne sie geht alles andere auch)
   import('../daten/phonetik.js').then(async (m) => {
@@ -347,6 +428,49 @@ async function aufbauen(app, lade) {
   const finger = new Map();          // pointerId -> {art:'taste', p, stimme} | {art:'buehne', y0, t0, pos0, gezogen, lief}
   const nutzer = new Map();          // p -> {art} fuer die leuchtenden Tasten
   const spieleTaste = (p) => engine.sampler.spiele(p, 84, engine.jetzt + 0.003, null);
+  // Gesten auf der Buehne: antippen = Start/Stopp · doppelt links/rechts = 10 s zurueck/vor (weitere Tipps: je 10 s mehr)
+  // senkrecht ziehen = spulen · zwei Finger auseinander/zusammen = Notenstrecke zoomen · lange halten = 2-Takt-Schleife
+  let tipp = {};
+  let zoom = null;                    // { d0, s0 } waehrend zwei Finger auf der Buehne liegen
+  const buehnenFinger = () => [...finger.values()].filter((f) => f.art === 'buehne');
+  const sprungHinweis = (richtung, sek) => {
+    let h = document.getElementById(richtung < 0 ? 'sprungL' : 'sprungR');
+    if (!h) {
+      h = document.createElement('div');
+      h.id = richtung < 0 ? 'sprungL' : 'sprungR';
+      h.className = `sprung ${richtung < 0 ? 'links' : 'rechts'}`;
+      h.innerHTML = `<div class="sprung-inhalt"><span>${symbol(richtung < 0 ? 'zurueck' : 'weiter')}${symbol(richtung < 0 ? 'zurueck' : 'weiter')}</span><b></b></div>`;
+      app.appendChild(h);
+    }
+    h.querySelector('b').textContent = `${sek} Sekunden`;
+    h.classList.remove('an');
+    void h.offsetWidth;
+    h.classList.add('an');
+    clearTimeout(h._t);
+    h._t = setTimeout(() => h.classList.remove('an'), 650);
+  };
+  const springenUm = (sek) => {
+    const t = Math.max(song.anfang, Math.min(song.ende - 0.5, tr.pos + sek));
+    aktionen.springen(t);
+  };
+  const tippen = (x) => {
+    const W = canvas.clientWidth || window.innerWidth;
+    const zone = x < W * 0.3 ? -1 : x > W * 0.7 ? 1 : 0;
+    const jetzt = performance.now();
+    if (tipp.zone === zone && zone !== 0 && jetzt - tipp.zeit < 340) {
+      clearTimeout(tipp.timer);
+      tipp.timer = null;
+      tipp.serie = (tipp.serie || 0) + 1;
+      tipp.zeit = jetzt;
+      springenUm(zone * 10);
+      sprungHinweis(zone, tipp.serie * 10);
+      return;
+    }
+    clearTimeout(tipp.timer);
+    if (zone === 0) { tipp = {}; aktionen.umschalten(); return; }
+    // erster Tipp am Rand: kurz warten, ob ein zweiter kommt (dann springen statt Start/Stopp)
+    tipp = { zone, zeit: jetzt, serie: 0, timer: setTimeout(() => { tipp.timer = null; aktionen.umschalten(); }, 300) };
+  };
   canvas.addEventListener('pointerdown', (ev) => {
     engine.aufwecken();
     try { canvas.setPointerCapture(ev.pointerId); } catch { /* ohne Erfassung geht es auch */ }
@@ -358,7 +482,31 @@ async function aufbauen(app, lade) {
       nutzer.set(p, { art: 'nutzer' });
       return;
     }
-    if (y < buehne.hitY) finger.set(ev.pointerId, { art: 'buehne', y0: y, zeit0: performance.now(), pos0: tr.pos, gezogen: false, lief: tr.spielt });
+    if (y >= buehne.hitY) return;
+    const f = { art: 'buehne', x0: x, y0: y, x, y, zeit0: performance.now(), pos0: tr.pos, gezogen: false, lief: tr.spielt };
+    finger.set(ev.pointerId, f);
+    const bf = buehnenFinger();
+    if (bf.length === 2) {
+      // zweiter Finger: Zoom statt Tippen/Ziehen
+      for (const g of bf) { g.zoom = true; clearTimeout(g.halten); }
+      clearTimeout(tipp.timer); tipp = {};
+      zoom = { d0: Math.max(30, Math.hypot(bf[0].x - bf[1].x, bf[0].y - bf[1].y)), s0: einst.get('ansicht.sichtSekunden') || 3.5 };
+      return;
+    }
+    // lange halten (ohne Bewegung): 2 Takte ab hier als Schleife – nochmal lange halten hebt sie auf
+    f.halten = setTimeout(() => {
+      if (f.gezogen || f.zoom || !finger.has(ev.pointerId)) return;
+      f.lang = true;
+      clearTimeout(tipp.timer); tipp = {};
+      if (tr.loop.aktiv) { tr.loopAus(); ui.toast('Schleife aus'); }
+      else {
+        const b0 = Math.floor(beatAusZeit(song, tr.pos) / 4) * 4;
+        tr.setLoop(zeitAusBeat(song, b0), zeitAusBeat(song, b0 + 8), true);
+        ui.toast('Schleife: diese 2 Takte – nochmal lange halten hebt sie auf', 2600);
+      }
+      try { navigator.vibrate?.(15); } catch { /* egal */ }
+      ui.zustandSync();
+    }, 650);
   });
   canvas.addEventListener('pointermove', (ev) => {
     const f = finger.get(ev.pointerId);
@@ -372,8 +520,18 @@ async function aufbauen(app, lade) {
       if (p != null) { f.p = p; f.stimme = spieleTaste(p); nutzer.set(p, { art: 'nutzer' }); } else finger.delete(ev.pointerId);
       return;
     }
+    f.x = x; f.y = y;
+    if (f.zoom) {
+      const bf = buehnenFinger();
+      if (bf.length === 2 && zoom) {
+        const d = Math.max(30, Math.hypot(bf[0].x - bf[1].x, bf[0].y - bf[1].y));
+        const sek = Math.max(1.5, Math.min(8, Math.round(zoom.s0 * (zoom.d0 / d) * 10) / 10));
+        if (sek !== einst.get('ansicht.sichtSekunden')) einst.set('ansicht.sichtSekunden', sek);
+      }
+      return;
+    }
     const dy = y - f.y0;
-    if (!f.gezogen && Math.abs(dy) > 10) { f.gezogen = true; if (tr.spielt) tr.pause(); }
+    if (!f.gezogen && Math.abs(dy) > 10) { f.gezogen = true; clearTimeout(f.halten); clearTimeout(tipp.timer); tipp = {}; if (tr.spielt) tr.pause(); }
     if (f.gezogen) {
       const pps = buehne.hitY / Math.max(0.8, einst.get('ansicht.sichtSekunden') || 3.5);
       tr.seek(Math.max(song.anfang, Math.min(song.ende, f.pos0 + dy / pps)), { weiter: false });   // nach unten ziehen = vorwaerts
@@ -384,8 +542,14 @@ async function aufbauen(app, lade) {
     finger.delete(ev.pointerId);
     if (!f) return;
     if (f.art === 'taste') { engine.sampler.stoppe(f.stimme); nutzer.delete(f.p); return; }
+    clearTimeout(f.halten);
+    if (f.zoom) {
+      if (!buehnenFinger().some((g) => g.zoom)) { zoom = null; ui.toast(`Notenstrecke: ${einst.get('ansicht.sichtSekunden')} Sekunden`, 1200); }
+      return;
+    }
+    if (f.lang) return;
     if (f.gezogen) { if (f.lief) aktionen.umschalten(); return; }
-    if (ev.type === 'pointerup' && performance.now() - f.zeit0 < 450) aktionen.umschalten();   // antippen = Start/Stopp
+    if (ev.type === 'pointerup' && performance.now() - f.zeit0 < 450) tippen(f.x0);
   };
   canvas.addEventListener('pointerup', fingerWeg);
   canvas.addEventListener('pointercancel', fingerWeg);
@@ -393,14 +557,15 @@ async function aufbauen(app, lade) {
   // ------------------------------------------------------------------ Bluetooth-Pedal / Tastatur
   window.addEventListener('keydown', (ev) => {
     if (!document.getElementById('textWurzel').classList.contains('versteckt')) return;   // Text-Ansicht hat eigene Tasten
+    if (liedblatt?.sichtbar) return;                                                       // Liedblatt ebenso
     const z = ev.target;
     if (z && (z.tagName === 'TEXTAREA' || (z.tagName === 'INPUT' && /^(text|search|number|password|email)$/.test(z.type)))) return;
     const geklappt = einst.get('geraet.pedal') === 'geklappt' && uw.aktiv;
     switch (ev.code) {
       case 'Space': ev.preventDefault(); aktionen.umschalten(); break;
       case 'Enter': case 'NumpadEnter': if (uw.aktiv) { ev.preventDefault(); uw.werten(true); } break;
-      case 'ArrowRight': case 'PageDown': ev.preventDefault(); if (geklappt) uw.werten(true); else aktionen.taktSprung(1); break;
-      case 'ArrowLeft': case 'PageUp': ev.preventDefault(); if (geklappt) uw.werten(false); else aktionen.taktSprung(-1); break;
+      case 'ArrowRight': case 'PageDown': ev.preventDefault(); if (ev.shiftKey) { springenUm(10); sprungHinweis(1, 10); } else if (geklappt) uw.werten(true); else aktionen.taktSprung(1); break;
+      case 'ArrowLeft': case 'PageUp': ev.preventDefault(); if (ev.shiftKey) { springenUm(-10); sprungHinweis(-1, 10); } else if (geklappt) uw.werten(false); else aktionen.taktSprung(-1); break;
       case 'ArrowUp': ev.preventDefault(); aktionen.tempoAendern(0.05); break;
       case 'ArrowDown': ev.preventDefault(); aktionen.tempoAendern(-0.05); break;
       case 'KeyU': aktionen.uebewegUmschalten(); break;
@@ -408,7 +573,8 @@ async function aufbauen(app, lade) {
       case 'KeyM': einst.set('spiel.metronom', !einst.get('spiel.metronom')); break;
       case 'KeyK': if (ev.shiftKey) stufeWaehlen('weiter'); else stilWaehlen('weiter'); break;
       case 'KeyJ': akkordModusUmschalten(); break;
-      case 'Escape': ui.blattZu(); document.getElementById('akkordblatt').classList.add('versteckt'); break;
+      case 'Escape': ui.blattZu(); break;
+      case 'KeyB': aktionen.liedblattOeffnen(); break;
       default: break;
     }
   });
@@ -423,14 +589,23 @@ async function aufbauen(app, lade) {
     } catch { wach = null; }
   };
   window.addEventListener('pointerdown', () => { letzteAktivitaet = performance.now(); }, true);
+  // Hintergrund: Klavier anhalten. Der Text-Teil bleibt offen und kuemmert sich selbst um seine Wiedergabe
+  // (die Unterwegs-Spur darf bei gesperrtem Bildschirm weiterlaufen).
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       tr.pause();
       einst.speichernJetzt(); if (uw.etappen.length) uw.speichernJetzt();
-      textAnsicht?.verstecken?.();
     } else if (wachWunsch) { wach = null; wachHalten(true); }
   });
-  window.addEventListener('pagehide', () => { einst.speichernJetzt(); if (uw.etappen.length) uw.speichernJetzt(); });
+  window.addEventListener('pagehide', () => { stelleMerken(); einst.speichernJetzt(); if (uw.etappen.length) uw.speichernJetzt(); });
+  // Stelle im Lied merken (alle 5 Sekunden, wenn sie sich bewegt hat)
+  let gemerkt = -1;
+  function stelleMerken() {
+    if (Math.abs(tr.pos - gemerkt) < 1) return;
+    gemerkt = tr.pos;
+    einst.set('zuletzt', { pos: Math.round(tr.pos * 10) / 10, zeit: Date.now() }, { still: true });
+  }
+  setInterval(stelleMerken, 5000);
   tr.on('ende', () => ui.toast('Ende – antippen spielt von vorn'));
 
   // ------------------------------------------------------------------ Bildschleife
@@ -441,9 +616,34 @@ async function aufbauen(app, lade) {
     geistText: (n) => n.silbe || null,
   };
   const steuerung = document.getElementById('steuerung');
+  const textWurzel = document.getElementById('textWurzel');
+  const textOffen = () => !textWurzel.classList.contains('versteckt');
+  const blattOffen = () => !!liedblatt?.sichtbar;
+  const startOffen = () => !!startseite?.sichtbar;
+  const wachPruefen = (jetztMs) => {
+    const wunsch = tr.spielt || uw.aktiv || !!textAnsicht?.aktiv?.() || !!liedblatt?.aktiv?.() || jetztMs - letzteAktivitaet < 5 * 60000;
+    if (wunsch !== wachWunsch) { wachWunsch = wunsch; wachHalten(wunsch); }
+  };
+  // Solange der Text-Teil offen ist, ruht die Klavier-Buehne (spart Akku); nur "Bildschirm wach" laeuft weiter
+  setInterval(() => { if (textOffen() || startOffen()) wachPruefen(performance.now()); }, 2000);
+  const klavierWecken = () => {
+    if (!bild.ruht || blattOffen()) return;
+    bild.ruht = false;
+    bild.sh = null;
+    letzteBildzeit = performance.now();
+    requestAnimationFrame(bild);
+  };
   let letzteBildzeit = performance.now();
   function bild() {
     const jetztMs = performance.now();
+    if (blattOffen()) {                              // Liedblatt: Klavier-Buehne ruht, Transport und Mitlaufen laufen
+      const t = tr.update();
+      liedblatt.tick(t);
+      wachPruefen(jetztMs);
+      requestAnimationFrame(bild);
+      return;
+    }
+    if (textOffen() || startOffen()) { bild.ruht = true; wachPruefen(jetztMs); return; }
     uw.tick((jetztMs - letzteBildzeit) / 1000);
     letzteBildzeit = jetztMs;
     const sh = steuerung.offsetHeight;
@@ -473,16 +673,24 @@ async function aufbauen(app, lade) {
     sicht.akkordTone = ak ? akkordTone(ak.sym) : null;
     buehne.zeichnen(sicht);
     ui.update(t);
-    const wunsch = tr.spielt || uw.aktiv || jetztMs - letzteAktivitaet < 5 * 60000;
-    if (wunsch !== wachWunsch) { wachWunsch = wunsch; wachHalten(wunsch); }
+    wachPruefen(jetztMs);
     requestAnimationFrame(bild);
   }
   requestAnimationFrame(bild);
+
+  // Womit die App startet: Startseite (iPad), Text (iPhone) oder was unter Einstellungen gewaehlt ist
+  let ziel = einst.get('geraet.start') || 'auto';
+  if (ziel === 'auto') ziel = handy ? 'text' : 'start';
+  if (ziel === 'text') await aktionen.textOeffnen();
+  else if (ziel === 'liedblatt') await aktionen.liedblattOeffnen();
+  else if (ziel === 'start') aktionen.startOeffnen();
   lade.text('Fertig', 1);
   lade.weg();
+  if (handy && !istStandalone()) setTimeout(() => ui.toast('Tipp: Teilen › „Zum Home-Bildschirm“ – dann ist es eine App, die auch ohne Internet läuft.', 5200), 1500);
 
-  // iOS gibt Ton erst nach einer Beruehrung frei: freundliche Startkarte (und Hinweis zum Home-Bildschirm)
-  if (engine.ctx.state !== 'running') {
+  // iOS gibt Ton erst nach einer Beruehrung frei: freundliche Startkarte (und Hinweis zum Home-Bildschirm).
+  // Startseite, Text und Liedblatt geben den Ton mit dem ersten Tipp selbst frei.
+  if (ziel === 'klavier' && engine.ctx.state !== 'running') {
     const hinweis = istStandalone() ? '' : `<p class="text-hilfe" style="margin-top:22px">Tipp: Über ${symbol('teilen')} „Teilen“ und dann „Zum Home-Bildschirm“ wird daraus eine App, die auch ohne Internet läuft.</p>`;
     const k = karte(app, `<h1></h1><p></p><button class="knopf akzent startknopf" id="startLos">${symbol('play')}<span>Los geht’s</span></button>${hinweis}`);
     k.querySelector('h1').textContent = song.titel || 'Tastenlicht';
@@ -491,7 +699,7 @@ async function aufbauen(app, lade) {
   }
   // alles fuer offline in den Speicher holen (der Service Worker laedt die verschluesselten Dateien nacheinander)
   if (window.tresorFrage) setTimeout(() => window.tresorFrage({ art: 'vorladen' }), 4000);
-  window.__tl = { song, tr, engine, einst, buehne, ui, uw };   // fuer Pruefungen
+  window.__tl = { song, tr, engine, einst, buehne, ui, uw, get text() { return textAnsicht; }, get blatt() { return liedblatt; }, get start() { return startseite; } };   // fuer Pruefungen
 }
 
 if (!window.TRESOR_INFO) starten(document.getElementById('app'));

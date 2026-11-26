@@ -1,0 +1,245 @@
+/* Liedblatt: Text am Stueck, Akkorde ueber der Silbe. Alle Klassen mit lb-. Dunkel (Standard) oder hell (.lb-hell, Notenpult).
+   Schriftgroesse ueber --lb-f (wird in liedblatt.js aus der Breite und der gewaehlten Stufe berechnet). Kein color-mix. */
+#blattWurzel { position: fixed; inset: 0; z-index: 30; background: var(--bg); }
+
+.lb-laden { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-3); font-size: 18px; }
+.lb-app {
+  --lb-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  --lb-papier: #0d0f16; --lb-tinte: #eef0f5; --lb-tinte-2: rgba(238, 240, 245, 0.62); --lb-chip: #262b3a; --lb-chip-tinte: #ffffff;
+  --lb-laut: #8fdc6a; --lb-linie: rgba(255, 255, 255, 0.08); --lb-aktiv: rgba(147, 221, 58, 0.11); --lb-aktiv-rand: rgba(147, 221, 58, 0.55);
+  --lb-jetzt: #93dd3a; --lb-jetzt-tinte: #0b1020; --lb-notiz: #ffd36b; --lb-grau: rgba(238, 240, 245, 0.38);
+  --lb-schrift: var(--lb-mono); --lb-wortabstand: 1ch;
+  position: absolute; inset: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); overflow: hidden; color: var(--lb-tinte);
+  padding: calc(8px + var(--oben)) calc(12px + var(--rechts)) 0 calc(12px + var(--links));
+  background: radial-gradient(ellipse at 15% 0%, rgba(79, 156, 255, 0.10), transparent 50%), radial-gradient(ellipse at 90% 100%, rgba(147, 221, 58, 0.06), transparent 45%), #07080c;
+}
+.lb-app[data-art="text"] { --lb-schrift: var(--schrift); --lb-wortabstand: 0.32em; }
+.lb-app.lb-hell {
+  --lb-papier: #fbfaf6; --lb-tinte: #1b1c20; --lb-tinte-2: #5d626b; --lb-chip: #e9ebef; --lb-chip-tinte: #15171c;
+  --lb-laut: #0f8a6a; --lb-linie: rgba(0, 0, 0, 0.08); --lb-aktiv: #fff1c4; --lb-aktiv-rand: #e2b437; --lb-jetzt: #1f7a4d; --lb-jetzt-tinte: #ffffff;
+  --lb-notiz: #9a6a00; --lb-grau: #a3a8b1;
+}
+.lb-frei { flex: 1; }
+.lb-leer { color: var(--text-3); padding: 30px 0; text-align: center; }
+
+/* ---------- Kopf ---------- */
+.lb-kopf { display: flex; align-items: center; gap: 10px; min-height: 56px; min-width: 0; }
+.lb-marke { min-width: 0; }
+.lb-titel { font: 800 26px/1.1 var(--schrift-titel); background: linear-gradient(90deg, #ffd36b, #93dd3a); -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
+.lb-unter { color: var(--text-3); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-tonart { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 30px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--rand); }
+.lb-tonart .knopf.rund { min-height: 42px; min-width: 42px; width: 42px; }
+.lb-ton { min-width: 76px; min-height: 42px; padding: 0 8px; border: 0; background: transparent; color: var(--text); font: 800 19px/1 var(--schrift-titel); display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; }
+.lb-ton small { font: 600 10.5px/1 var(--schrift); color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; }
+.lb-app .knopf.an { background: rgba(147, 221, 58, 0.18); border-color: var(--akzent); }
+
+/* ---------- Griffe ---------- */
+.lb-griffe { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 6px 0 10px; }
+.lb-griffe::-webkit-scrollbar { display: none; }
+.lb-griff { flex: none; display: grid; gap: 4px; justify-items: start; width: 132px; padding: 8px 10px 8px; border-radius: 14px; border: 1px solid var(--rand); background: var(--glas); color: var(--text); text-align: left; cursor: pointer; }
+.lb-griff:active { transform: scale(0.97); }
+.lb-gname { font: 800 17px/1.1 var(--schrift-titel); }
+.lb-gnoten { font-size: 11.5px; color: var(--text-3); font-weight: 600; white-space: nowrap; }
+.lb-tasten { width: 100%; height: auto; display: block; }
+.lb-tasten .w { fill: #f4f4f2; stroke: #8b909a; stroke-width: 0.8; }
+.lb-tasten .s { fill: #262931; }
+.lb-tasten .w.an { fill: #ffd36b; } .lb-tasten .s.an { fill: #e3a51b; }
+.lb-tasten .w.grund { fill: #ff9a3c; } .lb-tasten .s.grund { fill: #e07a10; }
+.lb-tasten .w.bass { fill: #7fb2ff; } .lb-tasten .s.bass { fill: #3d7ee0; }
+
+/* ---------- Blatt ---------- */
+.lb-blatt { position: relative; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; border-radius: 18px 18px 0 0;
+  background: var(--lb-papier); border: 1px solid var(--lb-linie); border-bottom: 0; padding: 4px clamp(14px, 3vw, 40px) 0; }
+.lb-inhalt { max-width: 1040px; margin: 0 auto; font-size: var(--lb-f, 19px); }
+.lb-ende { height: calc(150px + var(--unten)); }
+.lb-druckkopf { display: none; }
+.lb-teil { margin: 0.9em 0 0.4em; }
+.lb-teil-kopf { position: sticky; top: 0; z-index: 2; margin: 0 -0.4em 0.15em; padding: 0.35em 0.4em 0.25em; font: 700 0.78em/1.2 var(--schrift); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--lb-tinte-2); background: var(--lb-papier); display: flex; align-items: center; gap: 0.5em; }
+.lb-teil-kopf::before { content: ""; width: 0.65em; height: 0.65em; border-radius: 3px; background: var(--farbe); flex: none; }
+
+.lb-zeile { position: relative; margin: 0.1em -0.45em; padding: 0.12em 0.45em 0.32em; border-radius: 12px; border-left: 3px solid transparent; cursor: pointer;
+  font-family: var(--lb-schrift); line-height: 1.25; transition: background .25s; }
+.lb-zeile.lb-aktiv, .lb-takte.lb-aktiv { background: var(--lb-aktiv); border-left-color: var(--lb-aktiv-rand); }
+.lb-wort { display: inline-flex; flex-direction: column; vertical-align: top; position: relative; margin-right: var(--lb-wortabstand); }
+.lb-lane { position: relative; display: block; height: 1.42em; }
+.lb-tx { white-space: pre; font-weight: 500; }
+.lb-summen .lb-tx { color: var(--lb-tinte-2); font-style: italic; }
+.lb-s { border-radius: 4px; transition: color .1s; }
+.lb-zeile.lb-aktiv .lb-s.lb-gesungen { color: var(--lb-jetzt); }
+.lb-zeile.lb-aktiv .lb-s.lb-silbe-jetzt { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 0.18em; }
+.lb-lt { color: var(--lb-laut); font-weight: 700; white-space: pre; font-size: 0.94em; line-height: 1.2; }
+.lb-lt u { text-decoration-thickness: 2px; text-underline-offset: 0.16em; }
+.lb-nur-ak .lb-tx { visibility: hidden; }
+
+/* Akkord-Chips */
+.lb-ak { position: absolute; top: 0.04em; left: 0; z-index: 1; padding: 0 0.22em; border-radius: 0.22em; white-space: nowrap; cursor: pointer;
+  font: 800 0.9em/1.3 var(--lb-schrift); color: var(--lb-chip-tinte); background: var(--lb-chip); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+  transition: background .12s, color .12s, transform .12s; }
+.lb-app[data-art="text"] .lb-ak { font-family: var(--schrift-titel); }
+.lb-ak.lb-grau { background: none; box-shadow: none; color: var(--lb-grau); font-weight: 500; }
+.lb-ak.lb-dran { background: var(--lb-jetzt); color: var(--lb-jetzt-tinte); box-shadow: 0 0 0 3px rgba(147, 221, 58, 0.35), 0 0 18px rgba(147, 221, 58, 0.35); }
+.lb-ak.lb-eigen::after { content: ""; position: absolute; right: -3px; top: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--lb-notiz); }
+.lb-vz { display: inline-block; width: 0.55em; height: 0.95em; vertical-align: -0.1em; margin: 0 0.02em; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Takte ohne Gesang */
+.lb-takte { display: flex; flex-wrap: wrap; gap: 0; margin: 0.25em -0.45em 0.35em; padding: 0.25em 0.45em; border-radius: 12px; border-left: 3px solid transparent; cursor: pointer; font-family: var(--lb-schrift); }
+.lb-takt { position: relative; width: 6.4em; height: 1.75em; border-left: 2px solid var(--lb-grau); }
+.lb-takt:last-child { border-right: 2px solid var(--lb-grau); }
+.lb-takt .lb-ak { top: 0.2em; margin-left: 0.3em; }
+
+/* Notizen */
+.lb-notiz { display: flex; align-items: center; gap: 0.35em; margin-top: 0.1em; color: var(--lb-notiz); font: italic 600 0.74em/1.3 var(--schrift); white-space: normal; }
+.lb-notiz svg { width: 1.1em; height: 1.1em; flex: none; }
+.lb-notiz-knopf { display: none; }
+.lb-bearbeiten .lb-notiz-knopf { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin: 2px 0 0; padding: 0 10px; border-radius: 10px; border: 1px dashed var(--lb-grau);
+  background: transparent; color: var(--lb-tinte-2); font: 600 13px/1 var(--schrift); cursor: pointer; }
+.lb-bearbeiten .lb-notiz-knopf svg { width: 16px; height: 16px; }
+.lb-bearbeiten .lb-ak:not(.lb-grau) { outline: 2px dashed var(--lb-notiz); outline-offset: 2px; }
+.lb-bearbeiten .lb-s { cursor: copy; }
+.lb-bearbeiten .lb-s:active { background: rgba(255, 211, 107, 0.25); }
+.lb-bearbeiten .lb-zeile { cursor: default; }
+.lb-hinweis { position: absolute; left: 50%; bottom: calc(96px + var(--unten)); transform: translateX(-50%); z-index: 6; max-width: calc(100% - 24px); padding: 8px 14px; border-radius: 12px;
+  background: rgba(255, 211, 107, 0.95); color: #1b1405; font-weight: 700; font-size: 14px; text-align: center; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); pointer-events: none; }
+
+/* ---------- Leiste unten ---------- */
+.lb-leiste { position: absolute; z-index: 5; left: calc(12px + var(--links)); right: calc(12px + var(--rechts)); bottom: calc(10px + var(--unten));
+  display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 24px; background: rgba(16, 18, 26, 0.9); }
+.lb-play { flex: none; }
+.lb-jetzt { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lb-jetzt-ak { min-width: 2.6em; padding: 4px 12px; border-radius: 12px; background: var(--akzent); color: #0b1020; font: 800 27px/1.1 var(--schrift-titel); text-align: center; }
+.lb-dann { color: var(--text-2); font: 700 19px/1.1 var(--schrift-titel); white-space: nowrap; transition: color .15s; }
+.lb-dann small { color: var(--text-3); font: 600 12px/1 var(--schrift); text-transform: uppercase; letter-spacing: .06em; }
+.lb-dann.lb-bald { color: var(--akzent-2); }
+.lb-punkte { display: inline-flex; gap: 5px; }
+.lb-punkte i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.16); transition: background .08s; }
+.lb-punkte i.an { background: var(--akzent-2); }
+.lb-info { display: flex; flex-direction: column; color: var(--text-3); font-size: 13px; line-height: 1.3; min-width: 0; }
+.lb-teilname { color: var(--text-2); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-zeit { font-variant-numeric: tabular-nums; }
+.lb-klang button { min-width: 0; padding: 0 12px; font-size: 14px; }
+.lb-tempo { padding: 0 12px; gap: 6px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Einstellungen (Blatt von rechts) ---------- */
+.lb-einst { position: absolute; z-index: 20; right: calc(10px + var(--rechts)); top: calc(10px + var(--oben)); bottom: calc(10px + var(--unten)); width: min(430px, calc(100% - 20px));
+  display: flex; flex-direction: column; background: rgba(18, 20, 29, 0.97); transform: translateX(calc(100% + 40px)); visibility: hidden;
+  transition: transform .25s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .25s; }
+.lb-einst.lb-offen { transform: none; visibility: visible; transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
+.lb-einst-kopf { display: flex; align-items: center; gap: 10px; padding: 12px 12px 10px 18px; border-bottom: 1px solid var(--rand); }
+.lb-einst-kopf h2 { flex: 1; margin: 0; font: 700 21px/1.2 var(--schrift-titel); }
+.lb-einst-inhalt { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 18px 24px; }
+.lb-einst .abschnittstitel { margin: 18px 0 8px; }
+.lb-seg { display: flex; flex-wrap: wrap; width: 100%; margin-bottom: 8px; }
+.lb-seg button { flex: 1 1 auto; min-width: 0; padding: 0 10px; }
+.lb-hilfe { margin: 2px 0 6px; }
+.lb-reihe { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* ---------- Popover ---------- */
+.lb-pop { position: absolute; z-index: 25; width: max-content; max-width: min(420px, calc(100% - 20px)); padding: 12px 14px 14px; background: rgba(24, 27, 37, 0.98); border-color: var(--rand-stark); }
+.lb-pop-titel { font: 800 20px/1.25 var(--schrift-titel); margin-bottom: 8px; }
+.lb-pop-titel small { font: 600 13px/1 var(--schrift); color: var(--text-3); margin-left: 6px; }
+.lb-pop .lb-tasten { width: 260px; max-width: 100%; }
+.lb-pop .lb-gnoten { margin-top: 6px; font-size: 14px; }
+.lb-pop-gitter { display: grid; grid-template-columns: repeat(4, minmax(64px, 1fr)); gap: 6px; }
+.lb-pop-tonart .lb-pop-gitter { grid-template-columns: repeat(4, minmax(70px, 1fr)); }
+.lb-wahl { min-height: 50px; padding: 4px 8px; border-radius: 12px; border: 1px solid var(--rand); background: var(--glas-hell); color: var(--text); font: 800 17px/1.1 var(--schrift-titel);
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; }
+.lb-wahl small { font: 600 11px/1 var(--schrift); color: var(--text-3); }
+.lb-wahl.an { border-color: var(--akzent); background: rgba(147, 221, 58, 0.18); }
+.lb-frei-eingabe { display: flex; gap: 8px; margin-top: 10px; }
+.lb-frei-eingabe input { flex: 1; min-width: 0; min-height: 46px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--rand); background: rgba(0, 0, 0, 0.3); color: var(--text); font-size: 16px; -webkit-user-select: text; user-select: text; }
+.lb-notiz-feld { width: min(360px, 78vw); padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rand); background: rgba(0, 0, 0, 0.3); color: var(--text); font: 16px/1.4 var(--schrift); resize: vertical; -webkit-user-select: text; user-select: text; }
+
+/* ---------- Buehne: nur Text und Akkorde ---------- */
+.lb-buehne-knoepfe { display: none; }
+.lb-app.lb-buehne { grid-template-rows: minmax(0, 1fr); padding-top: var(--oben); padding-left: var(--links); padding-right: var(--rechts); }
+.lb-app.lb-buehne .lb-kopf, .lb-app.lb-buehne .lb-griffe, .lb-app.lb-buehne .lb-leiste { display: none; }
+.lb-app.lb-buehne .lb-blatt { border-radius: 0; border: 0; }
+.lb-app.lb-buehne .lb-inhalt { font-size: calc(var(--lb-f, 19px) * 1.25); max-width: none; }
+.lb-app.lb-buehne .lb-ende { height: 70vh; }
+.lb-app.lb-buehne .lb-buehne-knoepfe { display: flex; position: absolute; z-index: 6; right: calc(14px + var(--rechts)); bottom: calc(14px + var(--unten)); gap: 10px; align-items: center;
+  padding: 8px; border-radius: 40px; background: rgba(16, 18, 26, 0.85); opacity: 0.18; transition: opacity .35s; }
+.lb-app.lb-buehne.lb-knoepfe-an .lb-buehne-knoepfe { opacity: 1; }
+
+/* ---------- iPhone ---------- */
+html.handy .lb-app { padding: calc(6px + var(--oben)) calc(8px + var(--rechts)) 0 calc(8px + var(--links)); }
+html.handy .lb-kopf { gap: 6px; min-height: 50px; }
+html.handy .lb-titel { font-size: 21px; }
+html.handy .lb-unter { font-size: 12px; max-width: 34vw; }
+html.handy .lb-k-text span { display: none; }
+html.handy .lb-k-text { padding: 0; width: var(--tipp); border-radius: 50%; }
+html.handy .lb-tonart .knopf.rund { min-height: 38px; min-width: 38px; width: 38px; }
+html.handy .lb-ton { min-width: 52px; font-size: 17px; padding: 0 4px; }
+html.handy .lb-griff { width: 112px; padding: 6px 8px; }
+html.handy .lb-blatt { padding: 2px 12px 0; border-radius: 16px 16px 0 0; }
+html.handy .lb-leiste { left: calc(8px + var(--links)); right: calc(8px + var(--rechts)); bottom: calc(8px + var(--unten)); gap: 8px; padding: 6px 8px; }
+html.handy .lb-klang, html.handy .lb-info { display: none; }
+html.handy .lb-jetzt-ak { font-size: 22px; min-width: 2.2em; padding: 4px 8px; }
+html.handy .lb-dann { font-size: 16px; }
+html.handy .lb-punkte { display: none; }
+html.handy .lb-tempo span { font-size: 14px; }
+html.handy .lb-pop-gitter { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+html.handy .lb-wahl { min-height: 46px; font-size: 15px; padding: 4px; }
+html.handy .lb-einst { right: calc(6px + var(--rechts)); top: calc(6px + var(--oben)); bottom: calc(6px + var(--unten)); width: calc(100% - 12px - var(--links) - var(--rechts)); }
+@media (orientation: landscape) {
+  html.handy .lb-griffe { display: none; }
+  html.handy .lb-unter { display: none; }
+}
+
+/* ---------- schmale iPads (11" hochkant) ---------- */
+@media (max-width: 900px) {
+  .lb-k-text span { display: none; }
+  .lb-k-text { padding: 0; width: var(--tipp); border-radius: 50%; }
+  .lb-unter { max-width: 32vw; }
+  .lb-klang button { padding: 0 8px; font-size: 13px; }
+}
+
+/* ---------- Drucken (Teilen > Drucken / PDF) ---------- */
+@media print {
+  html.lb-druck, html.lb-druck body { overflow: visible !important; height: auto !important; background: #fff !important; }
+  html.lb-druck body > *:not(#app) { display: none !important; }
+  html.lb-druck #app > *:not(#blattWurzel) { display: none !important; }
+  html.lb-druck #blattWurzel { position: static; background: #fff; }
+  html.lb-druck .lb-app { position: static; display: block; padding: 0; background: #fff;
+    --lb-papier: #fff; --lb-tinte: #111; --lb-tinte-2: #555; --lb-chip: #e9ebef; --lb-chip-tinte: #111; --lb-laut: #0f8a6a; --lb-grau: #9aa0a8; --lb-notiz: #8a5d00; }
+  html.lb-druck .lb-kopf, html.lb-druck .lb-leiste, html.lb-druck .lb-einst, html.lb-druck .lb-pop, html.lb-druck .lb-hinweis, html.lb-druck .lb-buehne-knoepfe, html.lb-druck .lb-notiz-knopf { display: none !important; }
+  html.lb-druck .lb-griffe { display: grid !important; grid-template-columns: repeat(4, 1fr); overflow: visible; }
+  html.lb-druck .lb-griff { width: auto; background: #fff; border-color: #ddd; color: #111; }
+  html.lb-druck .lb-blatt { overflow: visible; border: 0; padding: 0; background: #fff; }
+  html.lb-druck .lb-druckkopf { display: block; color: #111; }
+  html.lb-druck .lb-druckkopf h1 { margin: 0; font: 800 30px/1.1 var(--schrift-titel); }
+  html.lb-druck .lb-druckkopf h1 span { color: #888; }
+  html.lb-druck .lb-druckkopf p { margin: 4px 0 8px; color: #555; }
+  html.lb-druck .lb-teil-kopf { position: static; }
+  html.lb-druck .lb-zeile, html.lb-druck .lb-takte { break-inside: avoid; background: none !important; border-left-color: transparent !important; }
+  html.lb-druck .lb-ak.lb-dran { background: var(--lb-chip); color: var(--lb-chip-tinte); transform: none; box-shadow: none; }
+  html.lb-druck .lb-s { color: inherit !important; text-decoration: none !important; }
+  html.lb-druck .lb-ende { display: none; }
+}
+
+/* Spickzettel: Muster des gewaehlten Begleit-Stils (neben den Griffen) */
+.lb-muster { flex: none; align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 4px; max-width: 300px; padding: 8px 12px; border-radius: 14px;
+  border: 1px dashed rgba(255, 211, 107, 0.5); color: var(--text-2); font: 600 13px/1.4 ui-monospace, Menlo, monospace; white-space: normal; }
+.lb-muster b { font: 700 13px/1.2 var(--schrift); color: var(--akzent-2); }
+html.lb-druck .lb-muster { color: #333; border-color: #bbb; }
+
+/* Akkorde auswendig: Name verdeckt, an seiner Stelle ein Fragezeichen-Feld gleicher Breite */
+.lb-ak.lb-verdeckt { color: transparent !important; background: repeating-linear-gradient(135deg, rgba(255, 211, 107, 0.22) 0 6px, rgba(255, 211, 107, 0.10) 6px 12px); box-shadow: inset 0 0 0 1.5px rgba(255, 211, 107, 0.55); }
+.lb-ak.lb-verdeckt::before { content: "?"; position: absolute; inset: 0; display: grid; place-items: center; color: #ffd36b; font-weight: 900; }
+.lb-ak.lb-verdeckt .lb-vz { visibility: hidden; }
+.lb-ak.lb-aufgedeckt { animation: lb-auf .45s ease-out; }
+@keyframes lb-auf { from { transform: scale(1.25); box-shadow: 0 0 0 6px rgba(255, 211, 107, 0.5); } }
+.lb-hell .lb-ak.lb-verdeckt::before { color: #9a6a00; }
+
+/* iPhone: Kopf entlasten (Anpassen/Buehne im Einstellungsblatt), nichts seitlich verschieben */
+.lb-blatt { overflow-x: hidden; }
+.lb-modi { display: none; }
+html.handy .lb-modi { display: flex; margin-top: 12px; }
+html.handy .lb-modi .knopf { flex: 1 1 auto; }
+html.handy .lb-kopf [data-a="bearbeiten"], html.handy .lb-kopf [data-a="buehne"] { display: none; }
+html.handy .lb-unter { display: none; }
+html.handy .lb-marke { flex: 1; min-width: 0; }
+html.handy .lb-titel { font-size: 19px; overflow: hidden; text-overflow: ellipsis; }
+html.handy .lb-kopf > .lb-frei { display: none; }
+html.handy .lb-tonart .knopf.rund { min-height: 36px; min-width: 36px; width: 36px; }
+html.handy .lb-ton { min-width: 46px; }

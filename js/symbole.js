@@ -41,6 +41,15 @@ const P = {
   noten: '<path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
   pedal: '<path d="M7 20h10l1.5-6.5H5.5z"/><path d="M12 13.5V8"/><path d="M8.5 8h7"/>',
   sonne: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  // Text-Teil (iPhone und Boni)
+  kopfhoerer: '<path d="M4 15.5V12a8 8 0 0 1 16 0v3.5"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.6"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.6"/>',
+  puzzle: '<path d="M5 8.5h3.4a2.1 2.1 0 1 1 3.7 0h3.4v3.4a2.1 2.1 0 1 1 0 3.7v3.4H12a2.1 2.1 0 1 0-3.7 0H5v-3.4a2.1 2.1 0 1 0 0-3.7z"/>',
+  frage: '<path d="M4.5 5h15v10.5h-7.2L8 19.5v-4H4.5z"/><path d="M10.2 8.6a1.9 1.9 0 1 1 2.7 1.7c-.5.3-.9.7-.9 1.3v.3"/><circle class="fuell" cx="12" cy="13.6" r=".95"/>',
+  flamme: '<path d="M12 21c-3.6 0-6-2.5-6-5.7 0-3.3 2.5-4.8 3.4-8 1 1.5 1.6 2.4 2.7 3 .2-2.5 1.3-4.7 3-6.5.3 2.7 2.9 5.4 2.9 9.6 0 4.7-2.4 7.6-6 7.6z"/>',
+  haus: '<path d="M3.5 11.5L12 4l8.5 7.5"/><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>',
+  stift: '<path d="M4 20l1.2-4.6L15.8 4.8a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/>',
+  liedblatt: '<rect class="fuell" x="3" y="3.5" width="6" height="4.2" rx="1.2"/><rect class="fuell" x="13.5" y="3.5" width="5" height="4.2" rx="1.2"/><path d="M3 11.2h18"/><rect class="fuell" x="8" y="13.6" width="5.5" height="4.2" rx="1.2"/><path d="M3 21h13"/>',
+  einfuegen: '<rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="M9 11h6M9 14.5h6"/>',
 };
 
 export function symbol(name) {

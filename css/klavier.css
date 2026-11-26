@@ -126,30 +126,6 @@
 .faellig-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #0b1020; background: var(--akzent-2); vertical-align: 2px; }
 
 /* ---------- Akkordblatt ---------- */
-#akkordblatt { position: fixed; inset: 0; z-index: 30; background: #f7f5ef; color: #17171b; display: flex; flex-direction: column; -webkit-user-select: text; user-select: text; }
-#akkordblatt .blatt-leiste { display: flex; align-items: center; gap: 10px; padding: calc(10px + var(--oben)) calc(16px + var(--rechts)) 10px calc(16px + var(--links)); background: #17171b; color: #fff; }
-#akkordblatt .blatt-leiste b { flex: 1; font: 700 19px var(--schrift-titel); }
-#akkordblatt .blatt-inhalt { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 24px calc(32px + var(--rechts)) 60px calc(32px + var(--links)); }
-.blatt-titel h1 { margin: 0; font: 800 34px/1.1 var(--schrift-titel); }
-.blatt-titel div { color: #555; margin-top: 4px; }
-.blatt-muster { margin-top: 14px; padding: 9px 12px; border-radius: 10px; border: 1px dashed #b9b4a6; font: 600 14px/1.45 ui-monospace, Menlo, monospace; color: #444; }
-.blatt-muster b { font-family: var(--schrift); color: #17171b; }
-.blatt-teil { margin-top: 26px; break-inside: avoid; }
-.blatt-teil h2 { margin: 0 0 6px; font: 800 15px var(--schrift-titel); letter-spacing: .08em; text-transform: uppercase; color: #8a1c22; }
-.blatt-takte { font: 600 15px/1.6 ui-monospace, Menlo, monospace; color: #333; white-space: pre; overflow-x: auto; }
-.blatt-zeile { display: flex; flex-wrap: wrap; align-items: flex-end; margin: 10px 0 2px; font-size: 21px; }
-.blatt-zeile.summen { color: #888; font-style: italic; }
-.blatt-zeile .sb { display: inline-flex; flex-direction: column; }
-.blatt-zeile .sb.wortanfang { margin-left: .3em; }
-.blatt-zeile .ak { min-height: 1.15em; font: 800 15px/1.15 var(--schrift-titel); color: #8a1c22; white-space: pre; }
-@media print {
-  body, html { overflow: visible !important; height: auto !important; background: #fff !important; }
-  body > *:not(#app) { display: none !important; }
-  #app > *:not(#akkordblatt) { display: none !important; }
-  #akkordblatt { position: static; }
-  #akkordblatt .blatt-leiste { display: none; }
-  #akkordblatt .blatt-inhalt { overflow: visible; padding: 0; }
-}
 
 /* ---------- Start- und Ladebildschirm ---------- */
 .vollbild-karte { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 35%, #1a1d29 0%, #07080c 70%); transition: opacity .35s; }
@@ -192,3 +168,17 @@
   #akkordHud { top: calc(76px + var(--oben)); min-width: 120px; }
   #akkordHud .akk { font-size: 30px; }
 }
+
+/* ---------- Doppeltipp-Sprung (wie bei Video-Apps) ---------- */
+.sprung { position: fixed; z-index: 12; top: 0; bottom: 0; width: 34vw; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity .25s; }
+.sprung.links { left: 0; background: radial-gradient(ellipse at 0% 50%, rgba(255, 255, 255, 0.16), transparent 70%); }
+.sprung.rechts { right: 0; background: radial-gradient(ellipse at 100% 50%, rgba(255, 255, 255, 0.16), transparent 70%); }
+.sprung.an { opacity: 1; transition: opacity .05s; }
+.sprung-inhalt { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 18px; border-radius: 22px; background: rgba(8, 10, 16, 0.55); }
+.sprung-inhalt span { display: flex; }
+.sprung-inhalt svg { width: 30px; height: 30px; margin: 0 -9px; }
+.sprung-inhalt b { font: 800 17px/1.2 var(--schrift-titel); }
+.sprung.an .sprung-inhalt span { animation: sprung-pfeil .45s ease-out; }
+@keyframes sprung-pfeil { from { opacity: .3; transform: translateX(var(--dx, 0)); } }
+.sprung.links .sprung-inhalt span { --dx: 10px; }
+.sprung.rechts .sprung-inhalt span { --dx: -10px; }
