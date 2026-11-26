@@ -88,6 +88,7 @@ export class Oberflaeche {
             <button class="co-chip" id="coAnhoeren"></button>
             <button class="co-chip" id="coZusammen"></button>
             <button class="co-chip" id="coTextUeben"></button>
+            <button class="co-chip" id="coWackel"></button>
           </div>
         </div>
         <div class="co-fuss" id="coFuss"></div>
@@ -217,6 +218,7 @@ export class Oberflaeche {
     $('coSchneller').onclick = () => uw.tempoAendern(0.05);
     $('coAnhoeren').onclick = () => { this.engine.aufwecken(); uw.vorspielen(); };
     $('coZusammen').onclick = () => { this.engine.aufwecken(); uw.teilZusammen(); };
+    $('coWackel').onclick = () => uw.wackelUmschalten();
     for (const b of $('coLaenge').querySelectorAll('button')) b.onclick = () => e.set('uebeweg.abschnitt', b.dataset.wert);
     for (const b of $('coZaehl').querySelectorAll('button')) b.onclick = () => this.einzaehlSetzen(b.dataset.wert);
     uw.on((art, x) => {
@@ -573,7 +575,7 @@ export class Oberflaeche {
     for (const { e: x, i } of uw.teilListe(e)) {
       const zx = uw.zustand(x);
       const teilweise = !zx.fertig && Object.values(zx.stationen).some((v) => v.fertig);
-      const b = el('button', `co-punkt${x.typ === 'durchlauf' ? ' alle' : ''}${zx.fertig ? ' fertig' : teilweise ? ' teil' : ''}${i === uw.daten.aktuell ? ' jetzt' : ''}`);
+      const b = el('button', `co-punkt${x.typ === 'durchlauf' ? ' alle' : ''}${zx.fertig ? ' fertig' : teilweise ? ' teil' : ''}${i === uw.daten.aktuell ? ' jetzt' : ''}${zx.wackel ? ' wackel' : ''}`);
       b.setAttribute('aria-label', x.typ === 'durchlauf' ? 'Alle zusammen' : `${x.titel}, ${uw.taktText(x)}`);
       if (x.typ === 'durchlauf') b.innerHTML = symbol('zusammen');
       else b.textContent = String(x.nr);
@@ -605,6 +607,8 @@ export class Oberflaeche {
     $('coZusammen').classList.toggle('versteckt', zi < 0);
     setzeSymbol($('coZusammen'), e.typ === 'durchlauf' ? 'rueck' : 'zusammen', e.typ === 'durchlauf' ? 'Zu den Abschnitten' : 'Alle zusammen');
     $('coAnhoeren').classList.toggle('an', uw.anhoeren);
+    setzeSymbol($('coWackel'), 'flagge', z.wackel ? 'Gemerkt' : 'Merken');
+    $('coWackel').classList.toggle('an', !!z.wackel);
     const tz = uw.ersteZeile(e);
     $('coTextUeben').classList.toggle('versteckt', !tz);
     $('coTextUeben').onclick = () => this.aktionen.textOeffnen(tz ? tz.nr : null);
@@ -621,6 +625,13 @@ export class Oberflaeche {
     const p = uw.fortschritt();
     box.innerHTML = `<div class="pfad-kopf"><div><b>${p.fertig}</b><span> von ${p.gesamt} Schritten einmal durchgespielt</span></div><div class="pfadleiste"><i style="width:${(p.anteil * 100).toFixed(1)}%"></i></div>
       <p class="text-hilfe">Haken heißt: einmal durchgespielt – nicht, dass es perfekt sitzen muss. Antippen springt dorthin.</p></div>`;
+    const wl = uw.wackelListe();
+    if (wl.length) {
+      const b = el('button', 'knopf gold pfad-wackel');
+      setzeSymbol(b, 'flagge', `Gemerkte Stellen üben (${wl.length})`);
+      b.onclick = () => { if (!uw.aktiv) this.aktionen.uebewegUmschalten(); uw.naechsteWackelstelle(); this.blattZu(); };
+      box.appendChild(b);
+    }
     let teil = null, gruppe = null;
     uw.etappen.forEach((e, i) => {
       if (e.teil !== teil) {
@@ -644,7 +655,8 @@ export class Oberflaeche {
       zeile.innerHTML = `<span class="kreis">${z.fertig ? symbol('haken') : kreis}</span><span class="tx"><b></b><span></span></span><span class="pips">${pips}</span>`;
       zeile.querySelector('b').textContent = titel;
       if (uw.istFaellig(e)) zeile.querySelector('b').insertAdjacentHTML('beforeend', '<span class="faellig-tag">wiederholen</span>');
-      zeile.querySelector('.tx span').textContent = unter;
+      if (z.wackel) zeile.querySelector('b').insertAdjacentHTML('beforeend', `<span class="wackel-tag">${symbol('flagge')}gemerkt</span>`);
+      zeile.querySelector('.tx > span').textContent = unter;
       zeile.onclick = () => { if (!uw.aktiv) this.aktionen.uebewegUmschalten(); uw.springen(i); this.blattZu(); };
       gruppe.appendChild(zeile);
     });
@@ -761,7 +773,7 @@ export class Oberflaeche {
         <b>Zeitleiste</b>: antippen = springen, waagerecht ziehen = spulen, lange drücken und ziehen = Schleife, doppelt tippen = Liedteil als Schleife.<br>
         <b>Noten</b>: doppelt links/rechts tippen = 10 Sekunden zurück/vor, zwei Finger = zoomen, lange drücken = 2-Takt-Schleife.<br>
         <b>Übeweg</b>: kurze Abschnitte, erst links, dann rechts, dann beide. „Geschafft“ heißt: einmal durchgespielt. Hand, Länge, Schleife und Einzählen sind jederzeit in der Übe-Karte umstellbar; „Alle zusammen“ spielt den ganzen Liedteil am Stück, „Anhören“ spielt den Abschnitt einmal vor. Der Pfeil oben klappt die Karte klein.<br>
-        <b>Tastatur</b>: Leertaste = Start/Stopp, Enter = Geschafft, N = Nochmal, H = Anhören, S = Schleife, Z = Alle zusammen, U = Übeweg.</p>
+        <b>Tastatur</b>: Leertaste = Start/Stopp, Enter = Geschafft, N = Nochmal, H = Anhören, S = Schleife, Z = Alle zusammen, F = Stelle merken, G = zur gemerkten Stelle, U = Übeweg.</p>
         <div class="abschnittstitel">Offline</div>
         <p class="text-hilfe" id="infoOffline">Wird geprüft …</p>
         <div class="abschnittstitel">Über</div>

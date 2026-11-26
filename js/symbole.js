@@ -56,6 +56,7 @@ const P = {
   treppe: '<path d="M3.5 19.5h4v-4h4v-4h4v-4h5"/><path d="M17 4.5h3.5V8"/>',
   klickAus: '<path d="M9.2 3h5.6L18.5 21h-13z"/><path d="M8 17.5h8"/><path d="M3.5 3.5l17 17"/>',
   vor: '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
+  flagge: '<path d="M5.5 21V4"/><path d="M5.5 4.5h11l-2.2 4 2.2 4h-11"/>',
   rueck: '<path d="M15 5.5L8.5 12l6.5 6.5"/>',
 };
 

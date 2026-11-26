@@ -546,6 +546,28 @@ export class Uebeweg {
     this.anwenden({ abspielen: lief });
   }
 
+  // Wackelstellen: schwierige Stellen merken und gezielt wieder aufsuchen
+  wackelUmschalten() {
+    const e = this.etappe;
+    if (!e) return;
+    const z = this.zustand(e);
+    z.wackel = !z.wackel;
+    this.nachricht = z.wackel ? 'Gemerkt: diese Stelle findest du im Lernpfad und mit „Gemerkte Stellen“ wieder.' : 'Nicht mehr gemerkt.';
+    this.speichernSpaeter();
+    this.melde('station');
+  }
+
+  wackelListe() { return this.etappen.map((e, i) => ({ e, i })).filter(({ e }) => this.daten.etappen[e.id]?.wackel); }
+
+  // zur naechsten gemerkten Stelle (nach der aktuellen, sonst von vorn)
+  naechsteWackelstelle() {
+    const l = this.wackelListe();
+    if (!l.length) return false;
+    const z = l.find(({ i }) => i > this.daten.aktuell) || l[0];
+    this.springen(z.i);
+    return true;
+  }
+
   // Abhaken zuruecknehmen (im Lernpfad lange druecken bzw. "Haken entfernen")
   hakenWeg(stId) {
     const e = this.etappe, ez = this.zustand(e);

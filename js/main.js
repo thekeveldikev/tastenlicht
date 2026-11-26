@@ -586,6 +586,8 @@ async function aufbauen(app, lade) {
       case 'KeyH': if (uw.aktiv) uw.vorspielen(); break;
       case 'KeyS': if (uw.aktiv) einst.set('uebeweg.schleife', !einst.get('uebeweg.schleife')); break;
       case 'KeyZ': if (uw.aktiv) uw.teilZusammen(); break;
+      case 'KeyF': if (uw.aktiv) uw.wackelUmschalten(); break;
+      case 'KeyG': if (uw.aktiv && !uw.naechsteWackelstelle()) ui.toast('Noch keine Stelle gemerkt'); break;
       case 'KeyL': aktionen.schleifeUmschalten(); break;
       case 'KeyM': einst.set('spiel.metronom', !einst.get('spiel.metronom')); break;
       case 'KeyK': if (ev.shiftKey) stufeWaehlen('weiter'); else stilWaehlen('weiter'); break;

@@ -29,6 +29,11 @@ export class Buehne {
     this.g2ctx = this.glow2.getContext('2d');
     this.glow3 = document.createElement('canvas');
     this.g3ctx = this.glow3.getContext('2d');
+    // Hochskalieren in Stufen (1/16 -> 1/8 -> 1/4 -> voll): rund statt kastig
+    this.auf8 = document.createElement('canvas');
+    this.a8ctx = this.auf8.getContext('2d');
+    this.auf4 = document.createElement('canvas');
+    this.a4ctx = this.auf4.getContext('2d');
     this.partikel = new Partikel(1100);
     this.pulse = new Pulse();
     this.sterne = new Sternenhimmel();
@@ -68,6 +73,8 @@ export class Buehne {
     this.glow.width = Math.ceil(W / 4); this.glow.height = Math.ceil(H / 4);
     this.glow2.width = Math.ceil(W / 8); this.glow2.height = Math.ceil(H / 8);
     this.glow3.width = Math.ceil(W / 16); this.glow3.height = Math.ceil(H / 16);
+    this.auf8.width = this.glow2.width; this.auf8.height = this.glow2.height;
+    this.auf4.width = this.glow.width; this.auf4.height = this.glow.height;
     this.layout();
     this.statischBauen();
     this.sterne.groesse(W, H);
@@ -290,13 +297,23 @@ export class Buehne {
       g3.setTransform(1, 0, 0, 1, 0, 0); g3.clearRect(0, 0, this.glow3.width, this.glow3.height);
       g3.imageSmoothingEnabled = true; g3.imageSmoothingQuality = 'high';
       g3.drawImage(this.glow2, 0, 0, this.glow3.width, this.glow3.height);
+      // in Stufen hochziehen: jede Stufe glaettet weiter (zwei bilineare Schritte statt eines grossen)
+      const a8 = this.a8ctx, a4 = this.a4ctx, st = Math.min(1, bloom);
+      a8.setTransform(1, 0, 0, 1, 0, 0); a8.globalCompositeOperation = 'source-over'; a8.globalAlpha = 1;
+      a8.clearRect(0, 0, this.auf8.width, this.auf8.height);
+      a8.imageSmoothingEnabled = true; a8.imageSmoothingQuality = 'high';
+      a8.globalAlpha = st * 0.8; a8.drawImage(this.glow3, 0, 0, this.auf8.width, this.auf8.height);
+      a8.globalCompositeOperation = 'lighter';
+      a8.globalAlpha = st * 0.55; a8.drawImage(this.glow2, 0, 0);
+      a4.setTransform(1, 0, 0, 1, 0, 0); a4.globalAlpha = 1;
+      a4.clearRect(0, 0, this.auf4.width, this.auf4.height);
+      a4.imageSmoothingEnabled = true; a4.imageSmoothingQuality = 'high';
+      a4.drawImage(this.auf8, 0, 0, this.auf4.width, this.auf4.height);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-      ctx.globalAlpha = Math.min(1, bloom) * 0.55;
-      ctx.drawImage(this.glow2, 0, 0, W, H);
-      ctx.globalAlpha = Math.min(1, bloom) * 0.8;
-      ctx.drawImage(this.glow3, 0, 0, W, H);
+      ctx.globalAlpha = 1;
+      ctx.drawImage(this.auf4, 0, 0, W, H);
       ctx.restore();
     }
     this.aktivVorher = aktiv;
@@ -432,7 +449,7 @@ export class Buehne {
         ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
         ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2.5, fs * 0.2);
         ctx.strokeStyle = 'rgba(10,12,16,0.62)';
-        const y = unten - Math.max(4, fs * 0.32);
+        const y = unten - Math.max(4, fs * 0.32) - (klingt && unten >= hitY - 1 ? Math.min(h - fs - 4, this.ww * 0.55) : 0);
         ctx.strokeText(text, xm + (persp ? (xl0 + xr0) / 2 - xm : 0), y);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(text, xm + (persp ? (xl0 + xr0) / 2 - xm : 0), y);
@@ -500,9 +517,10 @@ export class Buehne {
       const sch = ctx.createLinearGradient(0, hitY, 0, hitY + 14);
       sch.addColorStop(0, 'rgba(0,0,0,0.35)'); sch.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = sch; ctx.fillRect(k.x + 1, hitY, k.w - 2, 14);
-      // Leuchten
-      this.gctx.globalAlpha = 0.9; this.gctx.fillStyle = f.c1;
-      this.gctx.fillRect(k.x, hitY, k.w, k.schwarz ? this.schwarzH : tastH * 0.9);
+      // Leuchten: runder Fleck an der Tastenoberkante, laeuft nach unten aus
+      const gl = glowSprite(f.c1, 64), gb = k.w * 1.6;
+      this.gctx.globalAlpha = 0.7;
+      this.gctx.drawImage(gl, k.x + k.w / 2 - gb / 2, hitY - gb * 0.35, gb, gb * 1.3);
     };
     for (const [p, f] of farbeTaste) { const k = this.tasten.get(p); if (k && !k.schwarz) zeichneHell(k, f); }
     // Warte-Ziele und Vorschau (weisse Tasten)
@@ -571,15 +589,16 @@ export class Buehne {
         ctx.drawImage(gs, x - gr / 2, hitY - gr / 2, gr, gr);
         // heller weisser Kern direkt auf der Trefferlinie
         const kern = glowSprite('#ffffff', 64);
-        const kr0 = ww * (0.9 + 0.9 * blitz);
-        ctx.globalAlpha = (0.5 + 0.5 * blitz) * flimmer;
+        const kr0 = ww * (0.75 + 0.8 * blitz);
+        ctx.globalAlpha = (0.35 + 0.45 * blitz) * flimmer;
         ctx.drawImage(kern, x - kr0, hitY - kr0 * 0.55, kr0 * 2, kr0 * 1.1);
         const kr = kroneSprite(c1);
         const kb = ww * (2.6 + 1.8 * blitz), kh = kb * 0.72;
         ctx.globalAlpha = (0.55 + 0.45 * blitz) * flimmer;
         ctx.drawImage(kr, x - kb / 2, hitY - kh * 0.92, kb, kh);
-        this.gctx.globalAlpha = 1; this.gctx.fillStyle = c1;
-        this.gctx.fillRect(x - ww, hitY - ww * 1.2, ww * 2, ww * 1.6);
+        const gsb = glowSprite(c1, 64), gb = ww * (3.4 + 1.4 * blitz);
+        this.gctx.globalAlpha = 1;
+        this.gctx.drawImage(gsb, x - gb / 2, hitY - gb * 0.6, gb, gb);
       }
       if (fx.funken) {
         const rate = (n.l === 'mel' ? 55 : 22) * (0.5 + n.v / 127);
